@@ -16,6 +16,10 @@ var worldCtx; //Canvas drawing context of the world canvas
 var mapCtx; //Canvas drawing context of the map context
 var keyStates = {}; //Status of each (keyboard) key
 
+var hasStarted = false; //Used for the control of the tick loop.
+var running = false; //Used for the control of the tick loop.
+var stop = false; //Used for the control of the tick loop.
+
 ///////////////
 /// CLASSES ///
 ///////////////
@@ -53,28 +57,55 @@ function setup() {
 
 	resetCtx(worldCtx);
 	resetCtx(mapCtx);
+
+	reset();
 }
 
 function startButtonClick() {
-	//
+	//This is the callback function if you click the start button.
+	if(!running && !hasStarted) {
+		//If we aren't already running, and we haven't started yet, start for the first time.
+		reset();
+		running = true;
+		hasStarted = true;
+		tick(); //This is the actual loop function. You only need to call it once -- it will keep calling itself as appropriate.
+	}
+	else if(!running && hasStarted) {
+		//If we aren't running, but we have started yet, resume where we left off.
+		running = true;
+		tick(); //This is the actual loop function. You only need to call it once -- it will keep calling itself as appropriate.
+	}
+	//If we are running, do nothing.
 }
-
 function pauseButtonClick() {
-	//
+	//This is the callback function if you click the pause button.
+	if(running) {
+		//If you click the pause button while we're running, stop. Otherwise, do nothing.
+		stop = true;
+	}
+	//Note that the actual process of stopping is handled within the tick() function.
+	//This just lets the function know to stop the next time around.
 }
-
 function resetButtonClick() {
-	//
+	//This is the callback function if you click the reset button.
+	if(!running) {
+		hasStarted = false;
+		reset(); //Get everything back to its initial state.
+	}
 }
-
 function newWorldButtonClick() {
-	//
+	//This is the callback function if you click the new world button.
+	if(!running) {
+		//If we aren't currently running, generate a new world, and reset.
+		//resetContext() isn't needed, because the canvas itself isn't changing.
+		clearWorld();
+		generateWorld();
+		reset();
+	}
 }
-
 function keydownHandler(e) {
 	//
 }
-
 function keyupHandler(e) {
 	//
 }
@@ -87,12 +118,33 @@ function resetCtx(ctx) {
 	ctx.transform(scale, 0, 0, scale, 0, 0); //Scale according browser scaling
 	ctx.lineWidth = canvasLineWidth; //Set the appropriate line width
 }
-
 function clearCanvas(ctx) {
 	var tf = ctx.getTransform(); //Get the current transformation
 	ctx.setTransform(1, 0, 0, 1, 0, 0); //Reset the transformation
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); //Clear the canvas
 	ctx.setTransform(tf); //Restore the previous transformation
+}
+
+function reset() {
+	//
+}
+function tick() {
+	//This is the function where it all happens. It will repeatedly call itself until stopped.
+	if(stop) {
+		//Stop is set to true if the user pauses.
+		running = false;
+		stop = false;
+		return; //We return early, so all the code isn't executed.
+	}
+
+	requestAnimationFrame(tick);
+}
+
+function clearWorld() {
+	//
+}
+function generateWorld() {
+	//
 }
 
 /////////////////////
