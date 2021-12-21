@@ -7,6 +7,14 @@
 			border: 1px dotted black;
 			background-color: #eeeeee;
 		}
+		div#controlsCont div {
+			display: inline-block;
+			width: 10%;
+			height: 40px;
+			line-height: 40px;
+			text-align: center;
+			border: 1px solid black;
+		}
 	</style>
 </head>
 
@@ -14,6 +22,15 @@
 
 <canvas id="worldCanvas"></canvas>
 <canvas id="mapCanvas"></canvas>
+
+<br>
+
+<div id="controlsCont">
+	<div id="startButton">Start</div>
+	<div id="pauseButton">Pause</div>
+	<div id="resetButton">Reset</div>
+	<div id="newWorldButton">New World</div>
+</div>
 
 <script src="./script.js" type="text/javascript"></script>
 
