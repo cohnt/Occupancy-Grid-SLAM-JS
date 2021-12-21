@@ -13,6 +13,7 @@ var worldCanvas; //HTML element object of the world canvas
 var mapCanvas; //HTML element object of the map canvas
 var worldCtx; //Canvas drawing context of the world canvas
 var mapCtx; //Canvas drawing context of the map context
+var keyStates = {}; //Status of each (keyboard) key
 
 ///////////////
 /// CLASSES ///
@@ -38,6 +39,13 @@ function setup() {
 	document.getElementById("pauseButton").addEventListener("click", pauseButtonClick);
 	document.getElementById("resetButton").addEventListener("click", resetButtonClick);
 	document.getElementById("newWorldButton").addEventListener("click", newWorldButtonClick);
+
+	document.addEventListener("keydown", function(e) {
+		keydownHandler(e);
+	});
+	document.addEventListener("keyup", function(e) {
+		keyupHandler(e);
+	})
 }
 
 function startButtonClick() {
@@ -53,6 +61,14 @@ function resetButtonClick() {
 }
 
 function newWorldButtonClick() {
+	//
+}
+
+function keydownHandler(e) {
+	//
+}
+
+function keyupHandler(e) {
 	//
 }
 
