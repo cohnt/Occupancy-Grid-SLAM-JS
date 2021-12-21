@@ -4,14 +4,14 @@
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
 var worldScale = 20; //The width of the entire browser viewport (in meters), determining the scale of the displays
-var canvasLineWidth = 0.025;
+var canvasLineWidth = 0.02;
 var robotRadius = 0.25;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
 var robotStrokeStyle = "black";
 var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
-var obstacleSizeRange = [0.5, 3];
-var numObstacles = 10;
+var obstacleSizeRange = [0.5, 2];
+var numObstacles = 15;
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -34,6 +34,7 @@ var worldMaxX; //The maximum x coordinate shown in the world, i.e., worldWidth/2
 var worldMaxY; //The maximum y coordinate shown in the world, i.e., worldHeight/2
 
 var obstacles = []; //A list of obstacle objects
+var robotPose;
 
 ///////////////
 /// CLASSES ///
@@ -51,9 +52,6 @@ function Obstacle(pos, orien, width) {
 	this.draw = function(ctx) {
 		var dx = 0.5 * this.width * Math.cos(this.orien);
 		var dy = 0.5 * this.width * Math.sin(this.orien);
-
-		console.log(dx);
-		console.log(dy);
 
 		ctx.strokeStyle = obstacleStrokeStyle;
 		ctx.beginPath();
@@ -125,6 +123,7 @@ function setup() {
 
 	generateWorld();
 	reset();
+	drawFrame();
 }
 
 function startButtonClick() {
@@ -226,9 +225,19 @@ function drawRobot(ctx, pose) {
 	ctx.lineTo(front[0], front[1]);
 	ctx.stroke();
 }
+function drawFrame() {
+	clearCanvas(worldCtx);
+
+	//Draw the obstacles onto the world
+	for(var i=0; i<obstacles.length; ++i) {
+		obstacles[i].draw(worldCtx);
+	}
+	//Draw the robot onto the world
+	drawRobot(worldCtx, robotPose);
+}
 
 function reset() {
-	//
+	robotPose = new Pose([0, 0], 0);
 }
 function tick() {
 	//This is the function where it all happens. It will repeatedly call itself until stopped.
@@ -238,6 +247,8 @@ function tick() {
 		stop = false;
 		return; //We return early, so all the code isn't executed.
 	}
+
+	drawFrame();
 
 	requestAnimationFrame(tick);
 }
