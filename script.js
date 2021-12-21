@@ -36,6 +36,7 @@ var worldMaxX; //The maximum x coordinate shown in the world, i.e., worldWidth/2
 var worldMaxY; //The maximum y coordinate shown in the world, i.e., worldHeight/2
 
 var obstacles = []; //A list of obstacle objects
+var obstacleSegments = []; //A list of all segments of all obstacles
 var robotPose;
 var lastFrameTime;
 
@@ -296,12 +297,18 @@ function getTimeMS() {
 }
 
 function clearWorld() {
-	//
 	obstacles = [];
+	obstacleSegments = [];
 }
 function generateWorld() {
 	for(var i=0; i<numObstacles; ++i) {
 		obstacles.push(randomObstacle());
+	}
+	for(var i=0; i<numObstacles; ++i) {
+		var segments = obstacles[i].segments();
+		for(var j=0; j<segments.length; ++j) {
+			obstacleSegments.push(segments[j]);
+		}
 	}
 }
 
