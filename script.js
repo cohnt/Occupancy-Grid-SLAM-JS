@@ -152,7 +152,6 @@ function setup() {
 
 	generateWorld();
 	reset();
-	drawFrame();
 }
 
 function startButtonClick() {
@@ -269,6 +268,7 @@ function drawFrame() {
 
 function reset() {
 	robotPose = new Pose([0, 0], 0);
+	drawFrame();
 }
 function tick() {
 	//This is the function where it all happens. It will repeatedly call itself until stopped.
@@ -415,12 +415,12 @@ function lineCircleCollisionTest(segment, circleCenter, radius) {
 		return false;
 	}
 
-	var v = [radius - segment[0][0], radius - segment[0][1]];
+	var v = [circleCenter[0] - segment[0][0], circleCenter[1] - segment[0][1]];
 	var vLine = [[0, 0], v];
 	var vMag = magnitude(v);
 	var vUnitVec = [v[0]/vMag, v[1]-vMag];
 
-	var segmentMag = magnitude(segment);
+	var segmentMag = segmentLength(segment);
 	var segmentUnitVec = [
 		(segment[1][0]-segment[0][0])/segmentMag,
 		(segment[1][1]-segment[0][1])/segmentMag
@@ -440,10 +440,10 @@ function lineCircleCollisionTest(segment, circleCenter, radius) {
 		]
 	];
 
-	compVontoR = Math.abs(vectorDot(radius, v)/magnitude(radius));
+	compVontoR = Math.abs(vectorDot(rVec, v)/radius);
 
 	if(compVontoR <= radius) {
-		return lineCollisionTest(rLine, l);
+		return lineCollisionTest(rLine, segment);
 	}
 	else {
 		return false;
