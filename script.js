@@ -7,6 +7,8 @@ var worldScale = 20; //The width of the entire browser viewport (in meters), det
 var canvasLineWidth = 0.025;
 var robotRadius = 0.25;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
+var robotStrokeStyle = "black";
+var obstacleStrokeStyle = "black";
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -28,7 +30,29 @@ var stop = false; //Used for the control of the tick loop.
 
 function Pose(pos, orien) {
 	this.pos = pos.slice();
-	this.orien = orien;
+	this.orien = orien; //Given in raidans
+}
+function Obstacle(pos, orien, width) {
+	this.pos = pos.slice();
+	this.orien = orien; //Given in raidans
+	this.width = width;
+
+	this.draw = function(ctx) {
+		var dx = 0.5 * this.width * Math.cos(this.orien);
+		var dy = 0.5 * this.width * Math.sin(this.orien);
+
+		console.log(dx);
+		console.log(dy);
+
+		ctx.strokeStyle = obstacleStrokeStyle;
+		ctx.beginPath();
+		ctx.moveTo(this.pos[0] + dx, this.pos[1] + dy); //Top-right
+		ctx.lineTo(this.pos[0] + dy, this.pos[1] - dx); //Bottom-right
+		ctx.lineTo(this.pos[0] - dx, this.pos[1] - dy); //Bottom-left
+		ctx.lineTo(this.pos[0] - dy, this.pos[1] + dx); //Top-left
+		ctx.closePath();
+		ctx.stroke();
+	}
 }
 
 /////////////////
@@ -134,6 +158,7 @@ function clearCanvas(ctx) {
 function drawRobot(ctx, pose) {
 	//pose should be a Pose object
 	//Draw the outer circle
+	ctx.strokeStyle = robotStrokeStyle;
 	ctx.beginPath();
 	//We initially move to a position on the circle itself, so that there's no weird line from the center to the circle.
 	//Just JavaScript things! :)
