@@ -9,6 +9,8 @@ var robotRadius = 0.25;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
 var robotStrokeStyle = "black";
 var obstacleStrokeStyle = "black";
+var lidarStrokeStyle = "red";
+var obstacleSizeRange = [0.5, 3];
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -23,6 +25,12 @@ var keyStates = {}; //Status of each (keyboard) key
 var hasStarted = false; //Used for the control of the tick loop.
 var running = false; //Used for the control of the tick loop.
 var stop = false; //Used for the control of the tick loop.
+
+var pixelsPerMeter; //Pixels per meter
+var worldWidth; //World width in meters
+var worldHeight; //World height in meters
+var worldMaxX;
+var worldMaxY;
 
 ///////////////
 /// CLASSES ///
@@ -80,6 +88,12 @@ function setup() {
 		keyupHandler(e);
 	});
 
+	pixelsPerMeter = window.innerWidth / worldScale;
+	worldWidth = canvasSize[0] * window.innerWidth / pixelsPerMeter;
+	worldHeight = canvasSize[1] * window.innerHeight / pixelsPerMeter;
+	worldMaxX = worldWidth / 2;
+	worldMaxY = worldHeight / 2;
+
 	// Create the canvas contexts
 	worldCtx = worldCanvas.getContext("2d");
 	mapCtx = worldCanvas.getContext("2d");
@@ -87,6 +101,7 @@ function setup() {
 	resetCtx(worldCtx);
 	resetCtx(mapCtx);
 
+	generateWorld();
 	reset();
 }
 
@@ -145,8 +160,7 @@ function resetCtx(ctx) {
 	ctx.setTransform(1, 0, 0, 1, 0, 0); //Reset the transformation
 	ctx.transform(1, 0, 0, -1, 0, 0); //Make y+ point up
 	ctx.transform(1, 0, 0, 1, ctx.canvas.width/2, -ctx.canvas.height/2); //Center 0,0 in the middle of the canvas
-	var scale = canvasSize[0] * (window.innerWidth / worldScale);
-	ctx.transform(scale, 0, 0, scale, 0, 0); //Scale according browser scaling
+	ctx.transform(pixelsPerMeter, 0, 0, pixelsPerMeter, 0, 0); //Scale according browser scaling
 	ctx.lineWidth = canvasLineWidth; //Set the appropriate line width
 }
 function clearCanvas(ctx) {
