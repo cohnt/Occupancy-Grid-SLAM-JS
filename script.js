@@ -12,6 +12,8 @@ var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
 var obstacleSizeRange = [0.5, 2];
 var numObstacles = 15;
+var robotSpeed = 0.25; // Robot speed, in meters per second
+var robotTurnRate = 90 * (Math.PI / 180); // Robot turn rate, in radians per second
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -35,6 +37,7 @@ var worldMaxY; //The maximum y coordinate shown in the world, i.e., worldHeight/
 
 var obstacles = []; //A list of obstacle objects
 var robotPose;
+var lastFrameTime;
 
 ///////////////
 /// CLASSES ///
@@ -133,11 +136,13 @@ function startButtonClick() {
 		reset();
 		running = true;
 		hasStarted = true;
+		lastFrameTime = null;
 		tick(); //This is the actual loop function. You only need to call it once -- it will keep calling itself as appropriate.
 	}
 	else if(!running && hasStarted) {
 		//If we aren't running, but we have started yet, resume where we left off.
 		running = true;
+		lastFrameTime = null;
 		tick(); //This is the actual loop function. You only need to call it once -- it will keep calling itself as appropriate.
 	}
 	//If we are running, do nothing.
@@ -248,12 +253,23 @@ function tick() {
 		return; //We return early, so all the code isn't executed.
 	}
 
+	if(!lastFrameTime) {
+		lastFrameTime = getTimeMS();
+	}
+	var dt = getTimeMS() - lastFrameTime;
+	lastFrameTime += dt;
+
 	drawFrame();
 
 	requestAnimationFrame(tick);
 }
+function getTimeMS() {
+	//
+	return (new Date()).getTime();
+}
 
 function clearWorld() {
+	//
 	obstacles = [];
 }
 function generateWorld() {
