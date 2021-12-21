@@ -3,6 +3,7 @@
 /////////////////
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
+var worldScale = 20; //The width of the entire browser viewport (in meters), determining the scale of the displays
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
