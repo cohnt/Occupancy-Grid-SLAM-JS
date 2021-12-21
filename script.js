@@ -4,7 +4,9 @@
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
 var worldScale = 20; //The width of the entire browser viewport (in meters), determining the scale of the displays
-var canvasLineWidth = 0.1;
+var canvasLineWidth = 0.025;
+var robotRadius = 0.25;
+var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -24,7 +26,10 @@ var stop = false; //Used for the control of the tick loop.
 /// CLASSES ///
 ///////////////
 
-//
+function Pose(pos, orien) {
+	this.pos = pos.slice();
+	this.orien = orien;
+}
 
 /////////////////
 /// FUNCTIONS ///
@@ -125,6 +130,40 @@ function clearCanvas(ctx) {
 	ctx.setTransform(1, 0, 0, 1, 0, 0); //Reset the transformation
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); //Clear the canvas
 	ctx.setTransform(tf); //Restore the previous transformation
+}
+function drawRobot(ctx, pose) {
+	//pose should be a Pose object
+	//Draw the outer circle
+	ctx.beginPath();
+	//We initially move to a position on the circle itself, so that there's no weird line from the center to the circle.
+	//Just JavaScript things! :)
+	ctx.moveTo(pose.pos[0] + robotRadius, pose.pos[1]);
+	ctx.arc(pose.pos[0], pose.pos[1], robotRadius, 0, 2*Math.PI, true);
+	ctx.stroke();
+
+	//Draw a triangle showing orientation.
+	//First, compute the coordinates of the three points.
+	var dx = robotRadius * Math.cos(pose.orien)
+	var dy = robotRadius * Math.sin(pose.orien)
+	var front = [pose.pos[0] + dx, pose.pos[1] + dy]
+
+	var backLeftAngle = pose.orien + Math.PI - robotMarkerTriangleAngle;
+	dx = robotRadius * Math.cos(backLeftAngle);
+	dy = robotRadius * Math.sin(backLeftAngle);
+	var backLeft = [pose.pos[0] + dx, pose.pos[1] + dy];
+
+	var backRightAngle = pose.orien + Math.PI + robotMarkerTriangleAngle;
+	dx = robotRadius * Math.cos(backRightAngle);
+	dy = robotRadius * Math.sin(backRightAngle);
+	var backRight = [pose.pos[0] + dx, pose.pos[1] + dy];
+	
+	//Now actually draw the triangle.
+	ctx.beginPath();
+	ctx.moveTo(front[0], front[1]);
+	ctx.lineTo(backLeft[0], backLeft[1]);
+	ctx.lineTo(backRight[0], backRight[1]);
+	ctx.lineTo(front[0], front[1]);
+	ctx.stroke();
 }
 
 function reset() {
