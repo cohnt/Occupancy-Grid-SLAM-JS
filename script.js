@@ -4,8 +4,8 @@
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
 var worldScale = 20; //The width of the entire browser viewport (in meters), determining the scale of the displays
-var canvasLineWidth = 0.02;
-var robotRadius = 0.25;
+var canvasLineWidth = 0.015;
+var robotRadius = 0.2;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
 var robotStrokeStyle = "black";
 var obstacleStrokeStyle = "black";
@@ -259,6 +259,8 @@ function tick() {
 	var dt = getTimeMS() - lastFrameTime;
 	lastFrameTime += dt;
 
+	updateRobotPos(dt);
+
 	drawFrame();
 
 	requestAnimationFrame(tick);
@@ -276,6 +278,71 @@ function generateWorld() {
 	for(var i=0; i<numObstacles; ++i) {
 		obstacles.push(randomObstacle());
 	}
+}
+
+function updateRobotPos(dt) {
+	//This function is run every tick loop, based on the keys that are being held down at that time.
+	var upKey = 87; //W
+	var leftKey = 65; //A
+	var downKey = 83; //S
+	var rightKey = 68; //D
+
+	var orienChange = 0;
+	var posChange = [0, 0];
+
+	var ds = dt / 1000; //Change in time, in seconds
+
+	//Key are undefined before they're first pressed, but applying the ! operator twice converts undefined to false.
+	//I.e., !undefined == true, !!undefined == false
+
+	//First, handle orientation change.
+	if((!!keyStates[leftKey]) && !keyStates[rightKey]) {
+		//If we're trying to turn left and not right...
+		orienChange = ds * robotTurnRate;
+		robotPose.orien += orienChange;
+	}
+	else if(!keyStates[leftKey] && (!!keyStates[rightKey])) {
+		//If we're trying to turn right and not left...
+		orienChange = ds * robotTurnRate * -1;
+		robotPose.orien += orienChange;
+	}
+
+	//Now, handle position change.
+	if((!!keyStates[upKey]) && !keyStates[downKey]) {
+		//If we're trying to go forward and not backward...
+		var dx = ds * robotSpeed * Math.cos(robotPose.orien);
+		var dy = ds * robotSpeed * Math.sin(robotPose.orien);
+		var newPos = [
+			robotPose.pos[0] + dx,
+			robotPose.pos[1] + dy
+		];
+		if(!isColliding(newPos)) {
+			//If we're not driving into a wall or off the map, update the position.
+			robotPose.pos[0] += dx;
+			robotPose.pos[1] += dy;
+		}
+		posChange = [dx, dy];
+	}
+	else if(!keyStates[upKey] && (!!keyStates[downKey])) {
+		//If we're trying to go backward and not forward...
+		var dx = ds * robotSpeed * Math.cos(robotPose.orien);
+		var dy = ds * robotSpeed * Math.sin(robotPose.orien);
+		var newPos = [
+			robotPose.pos[0] - dx,
+			robotPose.pos[1] - dy
+		];
+		if(!isColliding(newPos)) {
+			//If we're not driving into a wall or off the map, update the position.
+			robotPose.pos[0] -= dx;
+			robotPose.pos[1] -= dy;
+		}
+		posChange = [dx, dy];
+	}
+	robotPose.pos[0] += posChange[0];
+	robotPose.pos[1] += posChange[1];
+}
+function isColliding() {
+	return false;
 }
 
 /////////////////////
