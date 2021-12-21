@@ -12,8 +12,8 @@ var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
 var obstacleSizeRange = [0.5, 2];
 var numObstacles = 15;
-var robotSpeed = 0.5; // Robot speed, in meters per second
-var robotTurnRate = 90 * (Math.PI / 180); // Robot turn rate, in radians per second
+var robotSpeed = 1; // Robot speed, in meters per second
+var robotTurnRate = 180 * (Math.PI / 180); // Robot turn rate, in radians per second
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -369,9 +369,9 @@ function updateRobotPos(dt) {
 	robotPose.pos[0] += posChange[0];
 	robotPose.pos[1] += posChange[1];
 }
-function isColliding() {
+function isColliding(pos) {
 	for(var i=0; i<obstacleSegments.length; ++i) {
-		if(lineCircleCollisionTest(obstacleSegments[i], robotPose.pos, robotRadius)) {
+		if(lineCircleCollisionTest(obstacleSegments[i], pos, robotRadius)) {
 			return true;
 		}
 	}
@@ -382,7 +382,7 @@ function magnitude(v) {
 	for(var i=0; i<v.length; ++i) {
 		total += Math.pow(v[i], 2);
 	}
-	return total;
+	return Math.sqrt(total);
 }
 function segmentLength(segment) {
 	//
@@ -393,7 +393,7 @@ function distance(p1, p2) {
 	for(var i=0; i<p1.length; ++i) {
 		total += Math.pow(p1[i] - p2[i], 2);
 	}
-	return total;
+	return Math.sqrt(total);
 }
 function vectorDot(v, w) {
 	var total = 0;
