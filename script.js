@@ -53,17 +53,42 @@ function Obstacle(pos, orien, width) {
 	this.width = width;
 
 	this.draw = function(ctx) {
+		var segments = this.segments();
+
+		ctx.strokeStyle = obstacleStrokeStyle;
+		for(var i=0; i<segments.length; ++i) {
+			ctx.beginPath();
+			ctx.moveTo(segments[i][0][0], segments[i][0][1]);
+			ctx.lineTo(segments[i][1][0], segments[i][1][1]);
+			ctx.stroke();
+		}
+	}
+
+	this.corners = function() {
 		var dx = 0.5 * this.width * Math.cos(this.orien);
 		var dy = 0.5 * this.width * Math.sin(this.orien);
 
-		ctx.strokeStyle = obstacleStrokeStyle;
-		ctx.beginPath();
-		ctx.moveTo(this.pos[0] + dx, this.pos[1] + dy); //Top-right
-		ctx.lineTo(this.pos[0] + dy, this.pos[1] - dx); //Bottom-right
-		ctx.lineTo(this.pos[0] - dx, this.pos[1] - dy); //Bottom-left
-		ctx.lineTo(this.pos[0] - dy, this.pos[1] + dx); //Top-left
-		ctx.closePath();
-		ctx.stroke();
+		var corners = [
+			[this.pos[0]+dx, this.pos[1]+dy],
+			[this.pos[0]+dy, this.pos[1]-dx],
+			[this.pos[0]-dx, this.pos[1]-dy],
+			[this.pos[0]-dy, this.pos[1]+dx]
+		];
+
+		return corners;
+	}
+
+	this.segments = function() {
+		var corners = this.corners();
+
+		var segments = [
+			[corners[0], corners[1]],
+			[corners[1], corners[2]],
+			[corners[2], corners[3]],
+			[corners[3], corners[0]]
+		];
+
+		return segments;
 	}
 }
 function randomObstacle() {
