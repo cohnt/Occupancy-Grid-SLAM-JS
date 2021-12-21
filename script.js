@@ -104,10 +104,12 @@ function newWorldButtonClick() {
 	}
 }
 function keydownHandler(e) {
-	//
+	var keyId = e.which;
+	keyStates[keyId] = true;
 }
 function keyupHandler(e) {
-	//
+	var keyId = e.which;
+	keyStates[keyId] = false;
 }
 
 function resetCtx(ctx) {
