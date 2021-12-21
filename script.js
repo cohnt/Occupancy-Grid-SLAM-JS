@@ -30,8 +30,10 @@ var stop = false; //Used for the control of the tick loop.
 var pixelsPerMeter; //Pixels per meter
 var worldWidth; //World width in meters
 var worldHeight; //World height in meters
-var worldMaxX;
-var worldMaxY;
+var worldMaxX; //The maximum x coordinate shown in the world, i.e., worldWidth/2
+var worldMaxY; //The maximum y coordinate shown in the world, i.e., worldHeight/2
+
+var obstacles = []; //A list of obstacle objects
 
 ///////////////
 /// CLASSES ///
@@ -123,10 +125,6 @@ function setup() {
 
 	generateWorld();
 	reset();
-
-	for(var i=0; i<numObstacles; ++i) {
-		randomObstacle().draw(worldCtx);
-	}
 }
 
 function startButtonClick() {
@@ -245,10 +243,12 @@ function tick() {
 }
 
 function clearWorld() {
-	//
+	obstacles = [];
 }
 function generateWorld() {
-	//
+	for(var i=0; i<numObstacles; ++i) {
+		obstacles.push(randomObstacle());
+	}
 }
 
 /////////////////////
