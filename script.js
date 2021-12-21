@@ -11,6 +11,7 @@ var robotStrokeStyle = "black";
 var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
 var obstacleSizeRange = [0.5, 3];
+var numObstacles = 10;
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -62,6 +63,25 @@ function Obstacle(pos, orien, width) {
 		ctx.stroke();
 	}
 }
+function randomObstacle() {
+	var width = (Math.random() * (obstacleSizeRange[1] - obstacleSizeRange[0])) + obstacleSizeRange[0];
+	var pos = [null, null];
+	do {
+		pos[0] = Math.random() * worldWidth - worldMaxX;
+		pos[1] = Math.random() * worldHeight - worldMaxY;
+	}
+	while(
+		pos[0] < robotRadius + width
+		&&
+		pos[0] > robotRadius - width
+		&&
+		pos[1] < robotRadius + width
+		&&
+		pos[1] > robotRadius - width
+	);
+	var orien = Math.random() * 2 * Math.PI;
+	return new Obstacle(pos, orien, width);
+}
 
 /////////////////
 /// FUNCTIONS ///
@@ -103,6 +123,10 @@ function setup() {
 
 	generateWorld();
 	reset();
+
+	for(var i=0; i<numObstacles; ++i) {
+		randomObstacle().draw(worldCtx);
+	}
 }
 
 function startButtonClick() {
