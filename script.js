@@ -12,7 +12,7 @@ var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
 var obstacleSizeRange = [0.5, 2];
 var numObstacles = 15;
-var robotSpeed = 0.25; // Robot speed, in meters per second
+var robotSpeed = 0.5; // Robot speed, in meters per second
 var robotTurnRate = 90 * (Math.PI / 180); // Robot turn rate, in radians per second
 
 ////////////////////////
@@ -350,25 +350,21 @@ function updateRobotPos(dt) {
 		];
 		if(!isColliding(newPos)) {
 			//If we're not driving into a wall or off the map, update the position.
-			robotPose.pos[0] += dx;
-			robotPose.pos[1] += dy;
+			posChange = [dx, dy];
 		}
-		posChange = [dx, dy];
 	}
 	else if(!keyStates[upKey] && (!!keyStates[downKey])) {
 		//If we're trying to go backward and not forward...
-		var dx = ds * robotSpeed * Math.cos(robotPose.orien);
-		var dy = ds * robotSpeed * Math.sin(robotPose.orien);
+		var dx = ds * robotSpeed * Math.cos(robotPose.orien) * -1;
+		var dy = ds * robotSpeed * Math.sin(robotPose.orien) * -1;
 		var newPos = [
-			robotPose.pos[0] - dx,
-			robotPose.pos[1] - dy
+			robotPose.pos[0] + dx,
+			robotPose.pos[1] + dy
 		];
 		if(!isColliding(newPos)) {
 			//If we're not driving into a wall or off the map, update the position.
-			robotPose.pos[0] -= dx;
-			robotPose.pos[1] -= dy;
+			posChange = [dx, dy];
 		}
-		posChange = [dx, dy];
 	}
 	robotPose.pos[0] += posChange[0];
 	robotPose.pos[1] += posChange[1];
