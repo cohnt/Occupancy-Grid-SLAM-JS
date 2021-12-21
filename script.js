@@ -372,145 +372,46 @@ function updateRobotPos(dt) {
 function isColliding(pos) {
 	for(var i=0; i<obstacleSegments.length; ++i) {
 		if(lineCircleCollisionTest(obstacleSegments[i], pos, robotRadius)) {
+
+
+			console.log(lineCircleCollisionTest(obstacleSegments[i], pos, robotRadius))
+			worldCtx.strokeStyle = "red";
+			worldCtx.beginPath();
+			worldCtx.moveTo(obstacleSegments[i][0][0], obstacleSegments[i][0][1]);
+			worldCtx.lineTo(obstacleSegments[i][1][0], obstacleSegments[i][1][1]);
+			worldCtx.stroke();
 			return true;
 		}
 	}
 	return false;
 }
-function magnitude(v) {
-	var total = 0;
-	for(var i=0; i<v.length; ++i) {
-		total += Math.pow(v[i], 2);
-	}
-	return Math.sqrt(total);
-}
-function segmentLength(segment) {
-	//
-	return distance(segment[0], segment[1]);
-}
-function distance(p1, p2) {
-	var total = 0;
-	for(var i=0; i<p1.length; ++i) {
-		total += Math.pow(p1[i] - p2[i], 2);
-	}
-	return Math.sqrt(total);
-}
-function vectorDot(v, w) {
-	var total = 0;
-	for(var i=0; i<v.length; ++i) {
-		total += v[i] * w[i];
-	}
-	return total;
-}
-function lineCircleCollisionTest(segment, circleCenter, radius) {
-	// Get distance from each end of the segment to the circle center
-	var p1Distance = distance(segment[0], circleCenter);
-	var p2Distance = distance(segment[1], circleCenter);
-	if((p1Distance <= radius) != (p2Distance <= radius)) {
-		//If one point is inside the circle and the other is outside, then they intersect
-		return true;
-	}
-	if(p1Distance <= radius && p2Distance <= radius) {
-		//If both points are inside the circle, then they don't intersect
-		return false;
-	}
 
-	var v = [circleCenter[0] - segment[0][0], circleCenter[1] - segment[0][1]];
-	var vLine = [[0, 0], v];
-	var vMag = magnitude(v);
-	var vUnitVec = [v[0]/vMag, v[1]-vMag];
-
-	var segmentMag = segmentLength(segment);
-	var segmentUnitVec = [
-		(segment[1][0]-segment[0][0])/segmentMag,
-		(segment[1][1]-segment[0][1])/segmentMag
-	];
-	var rVec = [
-		segmentUnitVec[1] * radius * -1,
-		segmentUnitVec[0] * radius
-	];
-	var rLine = [
-		[
-			rVec[0] + radius,
-			rVec[1] + radius
-		],
-		[
-			radius + (vUnitVec[1] * radius * -1),
-			radius + (vUnitVec[0] * radius)
-		]
-	];
-
-	compVontoR = Math.abs(vectorDot(rVec, v)/radius);
-
-	if(compVontoR <= radius) {
-		return lineCollisionTest(rLine, segment);
-	}
-	else {
-		return false;
-	}
-}
-function lineCollisionTest(l1, l2) {
-	var a, b, c, d, e, f, g, h, u, v, p, m, t;
-	//Special case: line segments are on the same line
-	if(Math.abs(l1[0] / magnitude(l1)) == Math.abs(l2[0] / magnitude(l2))) {
-		//Ok, they are parallel
-		p = [l2[0][0]-l1[0][0], l2[0][1]-l1[0][1]];
-		if(p[0] == 0 && p[1] == 0) {
-			return true; //they contain the same endpoint
-		}
-		//Ok, p isn't a common endpoint
-		m = magnitude(p);
-		p[0] /= m;
-		p[1] /= m;
-		if(Math.abs(p[0]) != Math.abs(l1[0] / magnitude(l1))) {
-			return false;
-		}
-
-		//Ok, they are along the same line...
-		if(l1[0][0] >= l2[0][0] && l1[0][0] <= l2[1][0]) {
-			return true;
-		}
-		if(l1[0][0] <= l2[0][0] && l1[0][0] >= l2[1][0]) {
-			return true;
-		}
-		if(l1[1][0] >= l2[0][0] && l1[1][0] <= l2[1][0]) {
-			return true;
-		}
-		if(l1[1][0] <= l2[0][0] && l1[1][0] >= l2[1][0]) {
-			return true;
-		}
-	}
-
-	//l1=<1x1+(1x2-1x1)u,1y1+(1y2-1y1)u>
-	//l2=<2x1+(2x2-2x1)v,2y1+(2y2-2y1)v>
-
-	//{1x1+(1x2-1x1)u = 2x1+(2x2-2x1)v
-	//{1y1+(1y2-1y1)u = 2y1+(2y2-2y1)v
-	//  or
-	//{a+bu = c+dv
-	//{e+fu = g+hv
-	//  becomes
-	//u = (hc+de-dg-ha)/(hb-df)
-	//v = (fa+bg-be-fc)/(fd-bh)
-	//if u and v are between 0 and 1, they intersect
-	a = l1[0][0];
-	b = l1[1][0] - l1[0][0];
-	c = l2[0][0];
-	d = l2[1][0] - l2[0][0];
-	e = l1[0][1];
-	f = l1[1][1] - l1[0][1];
-	g = l2[0][1];
-	h = l2[1][1] - l2[0][1];
-
-	u = ((h*c)+(d*e)-(d*g)-(h*a))/((h*b)-(d*f));
-	v = ((f*a)+(b*g)-(b*e)-(f*c))/((f*d)-(b*h));
-
-	if((u>=0) && (u<=1) && (v>=0) && (v<=1)) {
-		return true;
-	}
-	else {
-		return false;
-	}
+function lineCircleCollisionTest(line, circleCenter, radius) {
+	// https://stackoverflow.com/a/37225895/
+	var v1, v2, v3, u;
+	v1 = [0, 0];
+	v2 = [0, 0];
+	v3 = [0, 0];
+	v1[0] = line[1][0] - line[0][0];
+	v1[1] = line[1][1] - line[0][1];
+	v2[0] = circleCenter[0] - line[0][0];
+	v2[1] = circleCenter[1] - line[0][1];
+	u = (v2[0] * v1[0] + v2[1] * v1[1]) / (v1[1] * v1[1] + v1[0] * v1[0]); // unit dist of point on line
+	if(u >= 0 && u <= 1){
+		v3[0] = (v1[0] * u + line[0][0]) - circleCenter[0];
+		v3[1] = (v1[1] * u + line[0][1]) - circleCenter[1];
+		v3[0] *= v3[0];
+		v3[1] *= v3[1];
+		return Math.sqrt(v3[1] + v3[0]) < radius; // return distance from line
+	} 
+	// get distance from end points
+	v3[0] = circleCenter[0] - line[1][0];
+	v3[1] = circleCenter[1] - line[1][1];
+	v3[0] *= v3[0];  // square vectors
+	v3[1] *= v3[1];
+	v2[0] *= v2[0];
+	v2[1] *= v2[1];
+	return Math.min(Math.sqrt(v2[1] + v2[0]), Math.sqrt(v3[1] + v3[0])) < radius; // return smaller of two distances as the result
 }
 
 /////////////////////
