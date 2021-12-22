@@ -41,6 +41,63 @@
 	<div id="newWorldButton">New World</div>
 </div>
 
+<br><br>
+<div id="parameters">
+	<table>
+		<tbody class="narrowRows">
+			<tr>
+				<th>Parameter Name</th>
+				<th>Value</th>
+				<th>Description</th>
+			</tr>
+			<tr><td>&nbsp;</td></tr>
+			<tr><th>World Properties</th></tr>
+			<tr>
+				<td>World Size</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 10) {
+						worldScale = Number(elt.value);
+						pixelsPerMeter = window.innerWidth / worldScale;
+						worldWidth = canvasSize[0] * window.innerWidth / pixelsPerMeter;
+						worldHeight = canvasSize[1] * window.innerHeight / pixelsPerMeter;
+						worldMaxX = worldWidth / 2;
+						worldMaxY = worldHeight / 2;
+
+						//Occupancy grid parameters
+						gridWidth = Math.ceil(worldWidth / cellWidth);
+						gridHeight = Math.ceil(worldHeight / cellWidth);
+						if(gridWidth % 2 == 0) {
+							++gridWidth;
+						}
+						if(gridHeight % 2 == 0) {
+							++gridHeight;
+						}
+
+						//Create the canvas contexts
+						worldCtx = worldCanvas.getContext('2d');
+						mapCtx = mapCanvas.getContext('2d');
+
+						resetCtx(worldCtx);
+						resetCtx(mapCtx);
+
+						clearWorld();
+						generateWorld();
+						reset();
+					}
+				})(this)">40</textarea></td>
+				<td>The size/scaling of the world, with respect to the width of the browser.</td>
+			</tr>
+			<!-- <tr>
+				<td>Parameter</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					//
+				})(this)"></textarea></td>
+				<td>Description</td>
+			</tr> -->
+		</tbody>
+	</table>
+</div>
+
 <script src="./script.js" type="text/javascript"></script>
 
 <noscript>Please enable JavaScript!</noscript>
