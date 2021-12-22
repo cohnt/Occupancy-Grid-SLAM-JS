@@ -64,7 +64,6 @@ var worldMaxY; //The maximum y coordinate shown in the world, i.e., worldHeight/
 var obstacles = []; //A list of obstacle objects
 var obstacleSegments = []; //A list of all segments of all obstacles
 var robotPose;
-var robotPoseHistory = [];
 var lastFrameTime;
 var lidarDistances = []; //When simulating what the LIDAR sensor would see, this contains all of the distance readings.
 var lidarEnds = []; //The endpoints of each LIDAR beam.
@@ -76,6 +75,9 @@ var occupancyGrid = [];
 var estRobotPose;
 var particles = [];
 var maxWeight = 0;
+
+var robotPath = [];
+var robotEstPath = [];
 
 ///////////////
 /// CLASSES ///
@@ -358,6 +360,15 @@ function drawLidar(ctx) {
 	}
 	ctx.stroke();
 }
+function drawRobotPath(ctx, path, color) {
+	ctx.strokeStyle = color;
+	ctx.beginPath();
+	ctx.moveTo(path[0][0], path[0][1]);
+	for(var i=1; i<path.length; ++i) {
+		ctx.lineTo(path[i][0], path[i][1]);
+	}
+	ctx.stroke();
+}
 function drawFrame() {
 	clearCanvas(worldCtx);
 	clearCanvas(mapCtx);
@@ -367,9 +378,12 @@ function drawFrame() {
 		obstacles[i].draw(worldCtx);
 	}
 	//Draw the robot onto the world
+	drawRobotPath(worldCtx, robotPath, "blue");
 	drawRobot(worldCtx, robotPose);
 	drawLidar(worldCtx);
 	drawGrid(mapCtx);
+	drawRobotPath(mapCtx, robotPath, "blue");
+	drawRobotPath(mapCtx, robotEstPath, "green");
 	drawRobot(mapCtx, estRobotPose);
 
 	if(moved) {
@@ -382,9 +396,14 @@ function reset() {
 	lidarEnds = [];
 	robotPose = new Pose([0, 0], 0);
 	estRobotPose = robotPose;
-	robotPoseHistory = [];
 	constructGrid();
 	resetParticleFilter();
+
+	robotPath = [];
+	robotEstPath = [];
+	robotPath.push(robotPose.pos.slice());
+	robotEstPath.push(estRobotPose.pos.slice());
+
 	drawFrame();
 }
 function tick() {
@@ -401,6 +420,7 @@ function tick() {
 	}
 	var dt = getTimeMS() - lastFrameTime;
 	lastFrameTime += dt;
+	var lastRobotPose = JSON.parse(JSON.stringify(robotPose));
 
 	updateRobotPos(dt);
 	lidarDistances = computeLidarDists(robotPose);
@@ -410,10 +430,10 @@ function tick() {
 
 	if(moved) {
 		var dPos = [
-			robotPose.pos[0] - robotPoseHistory[robotPoseHistory.length-1].pos[0],
-			robotPose.pos[1] - robotPoseHistory[robotPoseHistory.length-1].pos[1]
+			robotPose.pos[0] - lastRobotPose.pos[0],
+			robotPose.pos[1] - lastRobotPose.pos[1]
 		];
-		var dOrien = robotPose.orien - robotPoseHistory[robotPoseHistory.length-1].orien;
+		var dOrien = robotPose.orien - lastRobotPose.orien;
 		propogateParticles(dPos, dOrien);
 		measureParticles(); //This computes the simulated LIDAR observation for every particle.
 		calculateWeights(); //This computes the weights for each particle, based on that observation.
@@ -429,10 +449,10 @@ function tick() {
 	drawFrame();
 
 	if(moved) {
+		robotPath.push(robotPose.pos.slice());
+		robotEstPath.push(estRobotPose.pos.slice());
 		resample(); //This is the function where new particles are created based on the old particles.
 	}
-
-	robotPoseHistory.push(JSON.parse(JSON.stringify(robotPose)));
 
 	requestAnimationFrame(tick);
 }
