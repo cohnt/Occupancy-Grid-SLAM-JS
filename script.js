@@ -21,6 +21,17 @@ var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar m
 var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
 
+var numParticles = 500; //Number of samples to use for the particle filter.
+var particlePosNoiseVariance = 5; //The variance of the diffusion noise added to the position during resampling.
+var particleOrientationNoiseVariance = 15 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
+var explorationFactor = 0.05; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
+var useExplorationParticlesGuess = false; //Whether or not to use exploration particles when estimating robot pose.
+
+var particleDispRadius = 2; //Radius of the circle marker for each particle.
+var particleDispHeadingLength = 5; //Length of the direction marker for each particle.
+var errorWeightColorDivisor = 300; //Used when selecting the color to correspond with each particle.
+var weightColorMultiplier = 0.9; //Used when selecting the color to correspond with each particle.
+
 ////////////////////////
 /// GLOBAL VARIABLES ///
 ////////////////////////
@@ -34,6 +45,7 @@ var keyStates = {}; //Status of each (keyboard) key
 var hasStarted = false; //Used for the control of the tick loop.
 var running = false; //Used for the control of the tick loop.
 var stop = false; //Used for the control of the tick loop.
+var moved = false; //Used for the control of the tick loop.
 
 var pixelsPerMeter; //Pixels per meter
 var worldWidth; //World width in meters
@@ -54,6 +66,7 @@ var gridHeight;
 var occupancyGrid = [];
 
 var estRobotPose;
+var particles = [];
 
 ///////////////
 /// CLASSES ///
@@ -125,6 +138,24 @@ function randomObstacle() {
 	);
 	var orien = Math.random() * 2 * Math.PI;
 	return new Obstacle(pos, orien, width);
+}
+//Each particle is a guess at where the robot may be, coupled with information about what that guess entails.
+function Particle(pos=[0,0], orien=0) {
+	this.pos = pos.slice(); //The guessed position of the robot.
+	this.orien = orien; //The guessed orientation of the robot.
+	this.weight = 0; //The weight of the particle reflects how well the guess matches the sensor observations.
+	this.lidarReadings = new Array(lidarNumPoints).fill(0); //The LIDAR sensor readings, simulated as if the robot were precisely at this.pos.
+	this.isExploration = false; //Exploration particles can be flagged, so that they aren't used when averaging particles to compute the predicted robot location.
+
+	this.randomize = function() {
+		//This simply moves the particle to a random pose in the world.
+		this.pos = [
+			(Math.random() * worldWidth) - worldMaxX,
+			(Math.random() * worldHeight) - worldMaxY
+		];
+		this.orien = Math.random() * 2 * Math.PI - Math.PI; //I.e. uniformly distributed between -Pi and Pi.
+		this.isExploration = true;
+	}
 }
 
 /////////////////
@@ -211,6 +242,7 @@ function resetButtonClick() {
 	//This is the callback function if you click the reset button.
 	if(!running) {
 		hasStarted = false;
+		moved = false;
 		reset(); //Get everything back to its initial state.
 	}
 }
@@ -219,6 +251,8 @@ function newWorldButtonClick() {
 	if(!running) {
 		//If we aren't currently running, generate a new world, and reset.
 		//resetContext() isn't needed, because the canvas itself isn't changing.
+		hasStarted = false;
+		moved = false;
 		clearWorld();
 		generateWorld();
 		reset();
@@ -306,6 +340,10 @@ function drawFrame() {
 	drawLidar(worldCtx);
 	drawGrid(mapCtx);
 	drawRobot(mapCtx, estRobotPose);
+
+	if(moved) {
+		drawParticles();
+	}
 }
 
 function reset() {
@@ -315,6 +353,7 @@ function reset() {
 	estRobotPose = robotPose;
 	robotPoseHistory = [];
 	constructGrid();
+	resetParticleFilter();
 	drawFrame();
 }
 function tick() {
@@ -339,7 +378,14 @@ function tick() {
 
 	drawFrame();
 
-	estRobotPose = robotPose; //TODO: Use MCL instead of just copying the robot's pose
+	if(moved) {
+		estRobotPose = robotPose; //TODO: Do particle filter stuff
+	}
+	else {
+		estRobotPose = robotPose;
+		//If the robot hasn't moved, use the real robot pose as the particle filter estimate.
+		//It will always just be (0,0).
+	}
 	updateOccupancyGrid(estRobotPose);
 
 	robotPoseHistory.push(JSON.parse(JSON.stringify(robotPose)));
@@ -441,6 +487,11 @@ function updateRobotPos(dt) {
 	}
 	robotPose.pos[0] += posChange[0];
 	robotPose.pos[1] += posChange[1];
+	if(!moved) {
+		if(posChange[0] != 0 || posChange[1] != 0 || orienChange != 0) {
+			moved = true;
+		}
+	}
 }
 function isColliding(pos) {
 	for(var i=0; i<obstacleSegments.length; ++i) {
@@ -681,6 +732,16 @@ function updateOccupancyGrid(pose) {
 		for(var j=0; j<passedCoords.length; ++j) {
 			occupancyGrid[passedCoords[j][0]][passedCoords[j][1]] -= Math.log(occupancyTrust);
 		}
+	}
+}
+
+function drawParticles() {
+	//
+}
+function resetParticleFilter() {
+	particles = [];
+	for(var i=0; i<numParticles; ++i) {
+		particles.push(new Particle());
 	}
 }
 
