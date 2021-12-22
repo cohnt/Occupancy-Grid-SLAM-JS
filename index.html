@@ -85,7 +85,7 @@
 						reset();
 					}
 				})(this)">40</textarea></td>
-				<td>The size/scaling of the world, with respect to the width of the browser. Must be no smaller than 10.</td>
+				<td>The size/scaling of the world, with respect to the width of the browser. Explicitly it's the width of the browser viewport, in meters. Must be no smaller than 10.</td>
 			</tr>
 			<tr>
 				<td>Number of Obstacles</td>
@@ -113,7 +113,7 @@
 						}
 					}
 				})(this)">0.5</textarea></td>
-				<td>Minimum obstacle size. Must be greater than zero and smaller than the maximum obstacle size.</td>
+				<td>Minimum obstacle size, in meters. Must be greater than zero and smaller than the maximum obstacle size.</td>
 			</tr>
 			<tr>
 				<td>Maximum Obstacle Size</td>
@@ -127,10 +127,87 @@
 						}
 					}
 				})(this)">2.5</textarea></td>
-				<td>Maximum obstacle size. Must be greater than zero and greater than the maximum obstacle size.</td>
+				<td>Maximum obstacle size, in meters. Must be greater than zero and greater than the maximum obstacle size.</td>
 			</tr>
 			<tr><td>&nbsp;</td></tr>
 			<tr><th>Robot Properties</th></tr>
+			<tr>
+				<td>Robot Size</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 0) {
+						robotRadius = Number(elt.value);
+						reset();
+					}
+				})(this)">0.2</textarea></td>
+				<td>The radius of the robot's base, in meters. Must be greater than zero.</td>
+			</tr>
+			<tr>
+				<td>Robot Forward Speed</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 0) {
+						robotSpeed = Number(elt.value);
+					}
+				})(this)">1.0</textarea></td>
+				<td>The robot's forward driving speed, in meters per second. Must be greater than zero.</td>
+			</tr>
+			<tr>
+				<td>Robot Turning Speed</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 0) {
+						robotTurnRate = Number(elt.value) * (Math.PI / 180); //Internally, this is stored in radians, but radians are harder to type in than degrees.
+					}
+				})(this)">120</textarea></td>
+				<td>The robot's turning speed, in degrees per second. Must be greater than zero.</td>
+			</tr>
+			<tr>
+				<td>Number of LIDAR Points</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 20) {
+						if(Number(elt.value) == Math.floor(Number(elt.value))) {
+							lidarNumPoints = Number(elt.value);
+							lidarAngle = lidarFOV / (lidarNumPoints - 1);
+						}
+					}
+				})(this)">80</textarea></td>
+				<td>The number of points the LIDAR sensor reads. Must be no smaller than 20.</td>
+			</tr>
+			<tr>
+				<td>LIDAR FOV</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 30 && Number(elt.value) <= 360) {
+						lidarFOV = Number(elt.value) * (Math.PI / 180); //Internally, this is stored in radians, but radians are harder to type in than degrees.
+						lidarAngle = lidarFOV / (lidarNumPoints - 1);
+					}
+				})(this)">360</textarea></td>
+				<td>The frame of view of the LIDAR sensor, in degrees. Must be between 30 and 360.</td>
+			</tr>
+			<tr>
+				<td>LIDAR Noise Variance</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0) {
+						lidarNoiseVariance = Number(elt.value);
+					}
+				})(this)">0.025</textarea></td>
+				<td>The variance of the (normally-distributed) noise added to the LIDAR measurements, in meters. Must be non-negative.</td>
+			</tr>
+			<tr>
+				<td>Odometry Noise Variance (Position)</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0) {
+						odomPosNoiseVar = Number(elt.value);
+					}
+				})(this)">0.005</textarea></td>
+				<td>The noise added to the odometry's position readings, in meters. Must be non-negative.</td>
+			</tr>
+			<tr>
+				<td>Odometry Noise Variance (Orientation)</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0) {
+						odomOrienNoiseVar = Number(elt.value) * (Math.PI / 180); //Internally, this is stored in radians, but radians are harder to type in than degrees.
+					}
+				})(this)">1</textarea></td>
+				<td>The noise added to the odometry's orientation readings, in degrees. Must be non-negative.</td>
+			</tr>
 
 			<tr><td>&nbsp;</td></tr>
 			<tr><th>Occupancy Grid Properties</th></tr>
