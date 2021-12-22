@@ -388,16 +388,11 @@ function updateRobotPos(dt) {
 	robotPose.pos[1] += posChange[1];
 }
 function isColliding(pos) {
+	if(Math.abs(pos[0]) > worldMaxX || Math.abs(pos[1]) > worldMaxY) {
+		return true;
+	}
 	for(var i=0; i<obstacleSegments.length; ++i) {
 		if(lineCircleCollisionTest(obstacleSegments[i], pos, robotRadius)) {
-
-
-			console.log(lineCircleCollisionTest(obstacleSegments[i], pos, robotRadius))
-			worldCtx.strokeStyle = "red";
-			worldCtx.beginPath();
-			worldCtx.moveTo(obstacleSegments[i][0][0], obstacleSegments[i][0][1]);
-			worldCtx.lineTo(obstacleSegments[i][1][0], obstacleSegments[i][1][1]);
-			worldCtx.stroke();
 			return true;
 		}
 	}
