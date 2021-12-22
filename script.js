@@ -79,6 +79,11 @@ var maxWeight = 0;
 var robotPath = [];
 var robotEstPath = [];
 
+var mouseCoords;
+var draggingObstacle = false;
+var draggedObstacleOffset;
+var obstacleIdx;
+
 ///////////////
 /// CLASSES ///
 ///////////////
@@ -215,6 +220,18 @@ function setup() {
 	document.addEventListener("keyup", function(e) {
 		keyupHandler(e);
 	});
+	worldCanvas.addEventListener("mousedown", function(e) {
+		worldCanvasMouseDownHandler(e);
+	});
+	worldCanvas.addEventListener("mousemove", function(e) {
+		worldCanvasMouseMoveHandler(e);
+	});
+	worldCanvas.addEventListener("mouseup", function(e) {
+		worldCanvasMouseUpHandler(e);
+	});
+	worldCanvas.addEventListener("mouseleave", function(e) {
+		worldCanvasMouseLeaveHandler(e);
+	})
 
 	//World parameters
 	pixelsPerMeter = window.innerWidth / worldScale;
@@ -298,6 +315,50 @@ function keydownHandler(e) {
 function keyupHandler(e) {
 	var keyId = e.which;
 	keyStates[keyId] = false;
+}
+function worldCanvasMouseDownHandler(e) {
+	if(e.which == 1 && hasStarted) { //Left mouse button
+		var rect = e.target.getBoundingClientRect();
+		var left = e.clientX - rect.left;
+		var top = e.clientY - rect.top;
+		mouseCoords = leftTopToXY(left, top);
+
+		for(var i=0; i<obstacles.length; ++i) {
+			if(distance(mouseCoords, obstacles[i].pos) < obstacles[i].width/2) {
+				draggingObstacle = true;
+				obstacleIdx = i;
+				draggedObstacleOffset = [
+					obstacles[i].pos[0] - mouseCoords[0],
+					obstacles[i].pos[1] - mouseCoords[1]
+				];
+				console.log("Starting to drag")
+				break;
+			}
+		}
+	}
+}
+function worldCanvasMouseMoveHandler(e) {
+	if(draggingObstacle) {
+		var rect = e.target.getBoundingClientRect();
+		var left = e.clientX - rect.left;
+		var top = e.clientY - rect.top;
+		mouseCoords = leftTopToXY(left, top);
+
+		obstacles[obstacleIdx].pos[0] = mouseCoords[0] + draggedObstacleOffset[0];
+		obstacles[obstacleIdx].pos[1] = mouseCoords[1] + draggedObstacleOffset[1];
+
+		updateObstacleSegments();
+	}
+}
+function worldCanvasMouseUpHandler(e) {
+	if(draggingObstacle) {
+		draggingObstacle = false;
+	}
+}
+function worldCanvasMouseLeaveHandler(e) {
+	if(draggingObstacle) {
+		draggingObstacle = false;
+	}
 }
 
 function resetCtx(ctx) {
@@ -469,6 +530,10 @@ function generateWorld() {
 	for(var i=0; i<numObstacles; ++i) {
 		obstacles.push(randomObstacle());
 	}
+	updateObstacleSegments();
+}
+function updateObstacleSegments() {
+	obstacleSegments = [];
 	for(var i=0; i<numObstacles; ++i) {
 		var segments = obstacles[i].segments();
 		for(var j=0; j<segments.length; ++j) {
@@ -1083,6 +1148,11 @@ function weightFromDistance(distances) {
 function getProbFromLog(l) {
 	//
 	return (1 / (1 + Math.exp(l)));
+}
+function leftTopToXY(left, top) {
+	var x = (left / pixelsPerMeter) - worldMaxX;
+	var y = worldMaxY - (top / pixelsPerMeter);
+	return [x,y];
 }
 
 /////////////////////
