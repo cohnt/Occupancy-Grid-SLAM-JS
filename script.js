@@ -574,6 +574,9 @@ function drawGrid(ctx) {
 		for(var j=0; j<occupancyGrid[i].length; ++j) {
 			var notLogProb = (1 / (1 + Math.exp(occupancyGrid[i][j])));
 			var intColor = Math.floor(notLogProb * 256);
+			if(intColor == 256) {
+				intColor = 255;
+			}
 			var hexColor = intColor.toString(16);
 			var colorCode = "#" + String(hexColor) + String(hexColor) + String(hexColor);
 			ctx.fillStyle = colorCode;
@@ -654,7 +657,6 @@ function updateOccupancyGrid(pose) {
 			pose.pos[1] + (dist * Math.sin(globalFrameAngle))
 		]);
 	}
-	console.log(lidarBeams.length);
 	for(var i=0; i<lidarBeams.length; ++i) {
 		var passedCoords = bresenham(lidarBeams[i]);
 		
