@@ -598,6 +598,40 @@ function xyToGridIdx(pos) {
 	var i = ((gridHeight-1)/2) - Math.round(pos[1] / cellWidth);
 	return [i, j];
 }
+function bresenham(lidarBeam) {
+	//Returns a list of grid cells passed over by the lidar beam, in the form of index pairs [row, col]
+	var p1 = xyToGridIdx(lidarBeam[0]);
+	var p2 = xyToGridIdx(lidarBeam[1]);
+	//https://stackoverflow.com/a/4672319
+	var passedCoords = [];
+
+	var dx = Math.abs(p2[0]-p1[0]);
+	var dy = Math.abs(p2[1]-p1[1]);
+	var sx = (p1[0] < p2[0]) ? 1 : -1;
+	var sy = (p1[1] < p2[1]) ? 1 : -1;
+	var err = dx - dy;
+
+	var x = p1[0];
+	var y = p1[1];
+
+	while(true) {
+		passedCoords.push([x, y]);
+		if(x == p2[0] && y == p2[1]) {
+			break;
+		}
+		var err2 = 2*err;
+		if(err2 > -dy) {
+			err -= dy;
+			x += sx;
+		}
+		if(err2 < dx) {
+			err += dx;
+			y += sy;
+		}
+	}
+
+	return passedCoords;
+}
 
 /////////////////////
 /// EXECUTED CODE ///
