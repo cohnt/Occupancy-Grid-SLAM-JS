@@ -21,7 +21,7 @@ var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar m
 var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
 
-var numParticles = 500; //Number of samples to use for the particle filter.
+var numParticles = 100; //Number of samples to use for the particle filter.
 var particlePosNoiseVariance = 5; //The variance of the diffusion noise added to the position during resampling.
 var particleOrientationNoiseVariance = 15 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
 var explorationFactor = 0.05; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
@@ -155,6 +155,10 @@ function Particle(pos=[0,0], orien=0) {
 		];
 		this.orien = Math.random() * 2 * Math.PI - Math.PI; //I.e. uniformly distributed between -Pi and Pi.
 		this.isExploration = true;
+	}
+
+	this.isValid = function() {
+		return Math.abs(this.pos[0]) < worldMaxX && Math.abs(this.pos[1]) < worldMaxY;
 	}
 }
 
@@ -372,14 +376,15 @@ function tick() {
 	lastFrameTime += dt;
 
 	updateRobotPos(dt);
-	computeLidarDists(robotPose);
+	lidarDistances = computeLidarDists(robotPose);
+	lidarEnds = [];
 	noisifyLidar();
 	computeLidarEndpoints(robotPose);
 
-	drawFrame();
-
 	if(moved) {
-		estRobotPose = robotPose; //TODO: Do particle filter stuff
+		measureParticles(); //This computes the simulated LIDAR observation for every particle.
+		calculateWeights(); //This computes the weights for each particle, based on that observation.
+		estRobotPose = makePrediction(); //This predicts the location of the robot, based on the particles and their weights.
 	}
 	else {
 		estRobotPose = robotPose;
@@ -387,6 +392,12 @@ function tick() {
 		//It will always just be (0,0).
 	}
 	updateOccupancyGrid(estRobotPose);
+
+	drawFrame();
+
+	if(moved) {
+		resample(); //This is the function where new particles are created based on the old particles.
+	}
 
 	robotPoseHistory.push(JSON.parse(JSON.stringify(robotPose)));
 
@@ -502,8 +513,7 @@ function isColliding(pos) {
 	return false;
 }
 function computeLidarDists(pose) {
-	lidarDistances = [];
-	lidarEnds = [];
+	var dists = [];
 	for(var lidarIdx=0; lidarIdx<lidarNumPoints; ++lidarIdx) {
 		var robotFrameAngle = (-lidarFOV / 2) + (lidarIdx * lidarAngle);
 		var globalFrameAngle = robotFrameAngle + pose.orien;
@@ -530,8 +540,9 @@ function computeLidarDists(pose) {
 				}
 			}
 		}
-		lidarDistances.push(bestDist);
+		dists.push(bestDist);
 	}
+	return dists;
 }
 function noisifyLidar() {
 	//This adds normally-distributed noise to a list of LIDAR readings.
@@ -617,14 +628,6 @@ function lineLineIntersection(l1, l2) {
 	}
 
 	return [xCoor, yCoor];
-}
-function randomNormal(mu, sigma) {
-	//Computed using the Box-Muller transform.
-	//https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
-	var u1 = Math.random();
-	var u2 = Math.random();
-	var z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-	return mu + (z0 * sigma);
 }
 
 function drawGrid(ctx) {
@@ -743,6 +746,215 @@ function resetParticleFilter() {
 	for(var i=0; i<numParticles; ++i) {
 		particles.push(new Particle());
 	}
+	noisifyParticles();
+}
+function measureParticles() {
+	//This function computes the LIDAR readings for every particle.
+	//It also moves particles that would be off the world or in a wall to a random location.
+	for(var i=0; i<numParticles; ++i) {
+		//For each particle...
+		if(!particles[i].isValid()) {
+			//If it's off the world or in a wall, randomize it.
+			particles[i].randomize();
+		}
+		//Compute the LIDAR readings for the particle. We use the same function as that for computing the robot's LIDAR readings.
+		particles[i].lidarReadings = computeLidarDists(particles[i]);
+	}
+}
+function calculateWeights() {
+	//This function computes the weights for every particle.
+	var lidarDataArr = []; //This array will contain the difference between the observed LIDAR reading and the particle's simulated reading.
+	var lidarDataWeights = []; //This array will contain the weights.
+	for(var i=0; i<lidarNumPoints; ++i) {
+		lidarDataArr[i] = particles.map(a => Math.abs(a.lidarReadings[i] - lidarDistances[i])); //Get the differences in distance.
+		lidarDataWeights[i] = normalizeWeight(weightFromDistance(lidarDataArr[i])); //Convert those differences into a weight.
+	}
+	//Combine and normalize the weights.
+	var combinedWeights = [];
+	for(var i=0; i<numParticles; ++i) {
+		combinedWeights[i] = 1;
+		for(var j=0; j<lidarNumPoints; ++j) {
+			combinedWeights[i] *= lidarDataWeights[j][i];
+		}
+	}
+
+	combinedWeights = normalizeWeight(combinedWeights); //Normalize again.
+	for(var i=0; i<particles.length; ++i) {
+		particles[i].weight = combinedWeights[i]; //Update the particle weights.
+	}
+}
+function makePrediction() {
+	return robotPose;
+}
+function sortParticles(particles) {
+	//This sorts the particles by weight. I got this code from Stack Overflow.
+	sorted = particles.slice()
+	sorted.sort((a, b) => (a.weight > b.weight) ? 1 : -1);
+	return sorted;
+}
+function resample() {
+	//Resampling step. This implements importance sampling.
+	//It's implemented slightly strangely, because Javascript doesn't have a great math library.
+	var weightData = particles.map(a => a.weight);
+	var newParticles = [];
+	var cs = cumsum(weightData);
+	var step = 1/((numParticles * (1 - explorationFactor))+1);
+	var chkVal = step;
+	var chkIndex = 0;
+	for(var i=0; i<numParticles * (1 - explorationFactor); ++i) {
+		while(cs[chkIndex] < chkVal) {
+			++chkIndex;
+		}
+		chkVal += step;
+		var newPos = particles[chkIndex].pos;
+		var newOrien = particles[chkIndex].orien;
+		var randomDist = randomNormal(0, particlePosNoiseVariance);
+		var randomAngle = Math.random() * Math.PI;
+		newPos[0] += randomDist * Math.cos(randomAngle);
+		newPos[1] += randomDist * Math.sin(randomAngle);
+		newOrien += randomNormal(0, particleOrientationNoiseVariance);
+		newParticles[i] = new Particle(newPos, newOrien);
+	}
+	for(var i=newParticles.length; i<numParticles; ++i) {
+		//Whatever particles haven't been resampled, are just randomly scattered to explore.
+		newParticles[i] = new Particle();
+		newParticles[i].randomize();
+	}
+	particles = newParticles.slice();
+}
+function noisifyParticles() {
+	for(var i=0; i<particles.length; ++i) {
+		var randomDist = randomNormal(0, particlePosNoiseVariance);
+		var randomAngle = Math.random() * Math.PI;
+		particles[i].pos[0] += randomDist * Math.cos(randomAngle);
+		particles[i].pos[1] += randomDist * Math.sin(randomAngle);
+		particles[i].orien += randomNormal(0, particleOrientationNoiseVariance);
+	}
+}
+
+function randomNormal(mu, sigma) {
+	//Computed using the Box-Muller transform.
+	//https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+	var u1 = Math.random();
+	var u2 = Math.random();
+	var z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+	return mu + (z0 * sigma);
+}
+function weightToColor(weight) {
+	//This is kinda gross. Just ignore it.
+	//In the future, go steal a colormap function.
+	if(weight > 1) {
+		weight = 1;
+	}
+
+	//Create HSL
+	var h = ((1-weight)*240)/360;
+	var s = 1;
+	var l = 0.5;
+
+	//Convert to RGB (from https://gist.github.com/mjackson/5311256)
+	var r, g, b;
+
+	function hue2rgb(p, q, t) {
+		if (t < 0) t += 1;
+		if (t > 1) t -= 1;
+		if (t < 1/6) return p + (q - p) * 6 * t;
+		if (t < 1/2) return q;
+		if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+		return p;
+	}
+
+	var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	var p = 2 * l - q;
+
+	r = hue2rgb(p, q, h + 1/3);
+	g = hue2rgb(p, q, h);
+	b = hue2rgb(p, q, h - 1/3);
+
+	r = Math.floor(r * 255);
+	g = Math.floor(g * 255);
+	b = Math.floor(b * 255);
+
+	//Convert to RGB color code
+	function componentToHex(c) {
+		var hex = c.toString(16);
+		return hex.length == 1 ? "0" + hex : hex;
+	}
+	function rgbToHex(r, g, b) {
+		return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+	}
+
+	return rgbToHex(r, g, b);
+}
+function errorColor(error) {
+	//Restrict the error weight to [0,1], and get its corresponding color.
+	var errorWeight = error / errorWeightColorDivisor;
+	if(errorWeight < 0) { errorWeight = 0; }
+	if(errorWeight > 1) { errorWeight = 1; }
+	errorWeight = 1 - errorWeight;
+	return weightToColor(errorWeight);
+}
+function dist2(a, b) {
+	//Euclidean distance-squared.
+	//Often used instead of regular Euclidean distance, since computing a square root is expensive and usually unnecessary.
+	var dx = b[0]-a[0];
+	var dy = b[1]-a[1];
+	return (dx*dx) + (dy*dy);
+}
+function angleDist(a, b) {
+	//Compute the "distance" between two angles.
+	var diff = a - b;
+	function specialMod(lhs, rhs) {
+		return lhs - (Math.floor(lhs/rhs) * rhs);
+	}
+	return (specialMod(diff + Math.PI, Math.PI*2)) - Math.PI;
+}
+function mean(arr) {
+	//Compute the mean of a given array.
+	var total = 0;
+	for(var i=0; i<arr.length; ++i) {
+		total += arr[i];
+	}
+	return total / arr.length;
+}
+function variance(arr) {
+	//Compute the variance of a given array.
+	var v = 0;
+	var m = mean(arr);
+	for(var i=0; i<arr.length; ++i) {
+		v += arr[i]*arr[i];
+	}
+	v /= arr.length;
+	v -= m*m;
+	return v;
+}
+function normalizeWeight(arr) {
+	//Normalize an array so its elements sum to 1.
+	var total = 0;
+	for(var i=0; i<arr.length; ++i) {
+		total += arr[i];
+	}
+	for(var i=0; i<arr.length; ++i) {
+		arr[i] /= total;
+	}
+	return arr;
+}
+function cumsum(arr) {
+	//Take the cumulative sum of an array.
+	for(var i=1; i<arr.length; ++i) {
+		arr[i] += arr[i-1];
+	}
+	return arr;
+}
+function weightFromDistance(distances) {
+	//Given an array of particle LIDAR distance differences, convert it to a list of weights.
+	var v = variance(distances);
+	var m = 1/(Math.sqrt(2*Math.PI*v));
+	var weights = [];
+	for(var i=0; i<distances.length; ++i) {
+		weights[i] = Math.pow(Math.E, -(Math.pow((distances[i]), 2) / (2*v))) * m;
+	}
+	return weights;
 }
 
 /////////////////////
