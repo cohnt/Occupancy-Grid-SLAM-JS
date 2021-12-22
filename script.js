@@ -279,7 +279,10 @@ function drawRobot(ctx, pose) {
 	ctx.lineTo(backLeft[0], backLeft[1]);
 	ctx.lineTo(backRight[0], backRight[1]);
 	ctx.lineTo(front[0], front[1]);
+	ctx.closePath();
 	ctx.stroke();
+	ctx.fillStyle = "black";
+	ctx.fill();
 }
 function drawLidar(ctx) {
 	ctx.strokeStyle = lidarStrokeStyle;
@@ -301,9 +304,8 @@ function drawFrame() {
 	//Draw the robot onto the world
 	drawRobot(worldCtx, robotPose);
 	drawLidar(worldCtx);
-	
-	drawRobot(mapCtx, estRobotPose);
 	drawGrid(mapCtx);
+	drawRobot(mapCtx, estRobotPose);
 }
 
 function reset() {
