@@ -22,7 +22,7 @@ var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
 var maxLog = 5;
 var minLog = -5;
-var distMax = 30;
+var distMax = Infinity;
 var eps = 0.00001;
 
 var numParticles = 250; //Number of samples to use for the particle filter.
