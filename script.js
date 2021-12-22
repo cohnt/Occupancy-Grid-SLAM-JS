@@ -289,6 +289,7 @@ function drawLidar(ctx) {
 }
 function drawFrame() {
 	clearCanvas(worldCtx);
+	clearCanvas(mapCtx);
 
 	//Draw the obstacles onto the world
 	for(var i=0; i<obstacles.length; ++i) {
