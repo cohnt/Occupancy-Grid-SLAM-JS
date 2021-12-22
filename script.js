@@ -665,7 +665,7 @@ function lineLineIntersection(l1, l2) {
 function drawGrid(ctx) {
 	for(var i=0; i<occupancyGrid.length; ++i) {
 		for(var j=0; j<occupancyGrid[i].length; ++j) {
-			var notLogProb = (1 / (1 + Math.exp(occupancyGrid[i][j])));
+			var notLogProb = getProbFromLog(occupancyGrid[i][j]);
 			var intColor = Math.floor(notLogProb * 256);
 			if(intColor == 256) {
 				intColor = 255;
@@ -1046,6 +1046,10 @@ function weightFromDistance(distances) {
 		weights[i] = Math.pow(Math.E, -(Math.pow((distances[i]), 2) / (2*v))) * m;
 	}
 	return weights;
+}
+function getProbFromLog(l) {
+	//
+	return (1 / (1 + Math.exp(l)));
 }
 
 /////////////////////
