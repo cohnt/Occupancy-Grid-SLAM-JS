@@ -20,9 +20,10 @@ var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar
 var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar measurements, in meters.
 var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
+var distMax = 10;
 
 var numParticles = 100; //Number of samples to use for the particle filter.
-var particlePosNoiseVariance = 5; //The variance of the diffusion noise added to the position during resampling.
+var particlePosNoiseVariance = 0.025; //The variance of the diffusion noise added to the position during resampling.
 var particleOrientationNoiseVariance = 15 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
 var explorationFactor = 0.05; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
 var useExplorationParticlesGuess = false; //Whether or not to use exploration particles when estimating robot pose.
@@ -528,7 +529,7 @@ function computeLidarDists(pose) {
 		];
 
 		var found = false;
-		var bestDist = Infinity;
+		var bestDist = distMax;
 		var bestIntersection = lidarBeam[1];
 		for(var i=0; i<obstacleSegments.length; ++i) {
 			var intersection = lineLineIntersection(obstacleSegments[i], lidarBeam);
@@ -758,7 +759,7 @@ function measureParticles() {
 			particles[i].randomize();
 		}
 		//Compute the LIDAR readings for the particle. We use the same function as that for computing the robot's LIDAR readings.
-		particles[i].lidarReadings = computeLidarDists(particles[i]);
+		particles[i].lidarReadings = computeLidarDists(particles[i]); //TODO: Make this use the already built map
 	}
 }
 function calculateWeights() {
@@ -784,7 +785,24 @@ function calculateWeights() {
 	}
 }
 function makePrediction() {
-	return robotPose;
+	//Given all of the weighted particles, predict the robot's location via a weighted average.
+	//One could also use the MLE or MAP particles.
+	var totalPos = [0, 0];
+	var totalOrien = 0;
+	var totalWeight = 0;
+	for(var i=0; i<particles.length; ++i) {
+		if(!particles[i].isExploration || useExplorationParticlesGuess) {
+			//Check if a particle is exploration before using it in our estimate.
+			totalPos[0] += particles[i].pos[0] * particles[i].weight;
+			totalPos[1] += particles[i].pos[1] * particles[i].weight;
+			totalOrien += particles[i].orien * particles[i].weight;
+			totalWeight += particles[i].weight;
+		}
+	}
+	totalPos[0] /= totalWeight;
+	totalPos[1] /= totalWeight;
+	totalOrien /= totalWeight;
+	return new Pose(totalPos, totalOrien);
 }
 function sortParticles(particles) {
 	//This sorts the particles by weight. I got this code from Stack Overflow.
