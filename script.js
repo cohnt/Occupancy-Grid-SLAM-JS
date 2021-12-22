@@ -23,6 +23,7 @@ var occupancyTrust = 4;
 var maxLog = 5;
 var minLog = -5;
 var distMax = 30;
+var eps = 0.00001;
 
 var numParticles = 250; //Number of samples to use for the particle filter.
 var particlePosNoiseVariance = 0.01; //The variance of the diffusion noise added to the position during resampling.
@@ -559,13 +560,11 @@ function computeLidarDists(pose) {
 			]
 		];
 
-		var found = false;
 		var bestDist = distMax;
 		var bestIntersection = lidarBeam[1];
 		for(var i=0; i<obstacleSegments.length; ++i) {
 			var intersection = lineLineIntersection(obstacleSegments[i], lidarBeam);
 			if(intersection) {
-				found = true;
 				var dist = distance(pose.pos, intersection);
 				if(dist < bestDist) {
 					bestDist = dist;
@@ -652,12 +651,12 @@ function lineLineIntersection(l1, l2) {
 	var xCoor = (tempA * z2 - z1 * tempB) / dist;
 	var yCoor = (tempA * z4 - z3 * tempB) / dist;
 
-	if (xCoor < Math.min(pointA[0], pointB[0]) || xCoor > Math.max(pointA[0], pointB[0]) ||
-		xCoor < Math.min(pointC[0], pointD[0]) || xCoor > Math.max(pointC[0], pointD[0])) {
+	if (xCoor < Math.min(pointA[0], pointB[0])-eps || xCoor > Math.max(pointA[0], pointB[0])+eps ||
+		xCoor < Math.min(pointC[0], pointD[0])-eps || xCoor > Math.max(pointC[0], pointD[0])+eps) {
 		return false;
 	}
-	if (yCoor < Math.min(pointA[1], pointB[1]) || yCoor > Math.max(pointA[1], pointB[1]) ||
-		yCoor < Math.min(pointC[1], pointD[1]) || yCoor > Math.max(pointC[1], pointD[1])) {
+	if (yCoor < Math.min(pointA[1], pointB[1])-eps || yCoor > Math.max(pointA[1], pointB[1])+eps ||
+		yCoor < Math.min(pointC[1], pointD[1])-eps || yCoor > Math.max(pointC[1], pointD[1])+eps) {
 		return false;
 	}
 
