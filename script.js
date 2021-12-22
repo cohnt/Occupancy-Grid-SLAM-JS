@@ -440,8 +440,8 @@ function drawFrame() {
 	}
 	//Draw the robot onto the world
 	drawRobotPath(worldCtx, robotPath, "blue");
-	drawRobot(worldCtx, robotPose);
 	drawLidar(worldCtx);
+	drawRobot(worldCtx, robotPose);
 	drawGrid(mapCtx);
 	drawRobotPath(mapCtx, robotPath, "blue");
 	drawRobotPath(mapCtx, robotEstPath, "green");
