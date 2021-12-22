@@ -3,7 +3,7 @@
 /////////////////
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
-var worldScale = 30; //The width of the entire browser viewport (in meters), determining the scale of the displays
+var worldScale = 40; //The width of the entire browser viewport (in meters), determining the scale of the displays
 var canvasLineWidth = 0.015;
 var robotRadius = 0.2;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
@@ -14,7 +14,7 @@ var obstacleSizeRange = [0.5, 2.5];
 var numObstacles = 50;
 var robotSpeed = 1.0; // Robot speed, in meters per second
 var robotTurnRate = 120 * (Math.PI / 180); // Robot turn rate, in radians per second
-var lidarNumPoints = 60; // Number of points given in each sweep of the lidar
+var lidarNumPoints = 80; // Number of points given in each sweep of the lidar
 var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 var lidarNoiseVariance = 0.025; //The variance of the noise affecting the lidar measurements, in meters.
@@ -405,7 +405,7 @@ function tick() {
 	lidarDistances = computeLidarDists(robotPose);
 	lidarEnds = [];
 	noisifyLidar();
-	computeLidarEndpoints(robotPose);
+	lidarEnds = computeLidarEndpoints(robotPose);
 
 	if(moved) {
 		var dPos = [
@@ -586,15 +586,17 @@ function noisifyLidar() {
 	}
 }
 function computeLidarEndpoints(pose) {
+	var ends = [];
 	for(var i=0; i<lidarDistances.length; ++i) {
 		var robotFrameAngle = (-lidarFOV / 2) + (i * lidarAngle);
 		var globalFrameAngle = robotFrameAngle + pose.orien;
 		var dist = lidarDistances[i] == Infinity ? 43*(worldWidth + worldHeight) : lidarDistances[i];
-		lidarEnds.push([
+		ends.push([
 			pose.pos[0] + (dist * Math.cos(globalFrameAngle)),
 			pose.pos[1] + (dist * Math.sin(globalFrameAngle))
 		]);
 	}
+	return ends;
 }
 
 function distance(p1, p2) {
@@ -809,7 +811,18 @@ function measureParticles() {
 			particles[i].randomize();
 		}
 		//Compute the LIDAR readings for the particle. We use the same function as that for computing the robot's LIDAR readings.
-		particles[i].lidarReadings = computeLidarDists(particles[i]); //TODO: Make this use the already built map
+		var lidarCoords = computeLidarEndpoints(particles[i])
+		particles[i].lidarProbs = [];
+		for(var j=0; j<lidarCoords.length; ++j) {
+			var endPoint = lidarCoords[j];
+			var idx = xyToGridIdx(endPoint);
+			if(idx[0] >= occupancyGrid.length || idx[0] < 0 || idx[1] >= occupancyGrid[0].length || idx[1] < 0) {
+				particles[i].lidarProbs.push(0.5);
+				continue;
+			}
+			particles[i].lidarProbs.push(getProbFromLog(occupancyGrid[idx[0]][idx[1]]));
+		}
+		// particles[i].lidarReadings = computeLidarDists(particles[i]); //TODO: Make this use the already built map
 	}
 }
 function calculateWeights() {
@@ -817,7 +830,8 @@ function calculateWeights() {
 	var lidarDataArr = []; //This array will contain the difference between the observed LIDAR reading and the particle's simulated reading.
 	var lidarDataWeights = []; //This array will contain the weights.
 	for(var i=0; i<lidarNumPoints; ++i) {
-		lidarDataArr[i] = particles.map(a => Math.abs(a.lidarReadings[i] - lidarDistances[i])); //Get the differences in distance.
+		// lidarDataArr[i] = particles.map(a => Math.abs(a.lidarReadings[i] - lidarDistances[i])); //Get the differences in distance.
+		lidarDataArr[i] = particles.map(a => a.lidarProbs[i]);
 		lidarDataWeights[i] = normalizeWeight(weightFromDistance(lidarDataArr[i])); //Convert those differences into a weight.
 	}
 	//Combine and normalize the weights.
@@ -1039,7 +1053,7 @@ function cumsum(arr) {
 }
 function weightFromDistance(distances) {
 	//Given an array of particle LIDAR distance differences, convert it to a list of weights.
-	var v = variance(distances);
+	var v = variance(distances) + 0.01;
 	var m = 1/(Math.sqrt(2*Math.PI*v));
 	var weights = [];
 	for(var i=0; i<distances.length; ++i) {
