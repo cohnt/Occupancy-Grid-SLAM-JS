@@ -18,6 +18,7 @@ var lidarNumPoints = 50; // Number of points given in each sweep of the lidar
 var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar measurements, in meters.
+var cellWidth = 0.05; //The width of each occupancy grid cell, in meters
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -46,6 +47,10 @@ var robotPoseHistory = [];
 var lastFrameTime;
 var lidarDistances = []; //When simulating what the LIDAR sensor would see, this contains all of the distance readings.
 var lidarEnds = []; //The endpoints of each LIDAR beam.
+
+var gridWidth;
+var gridHeight;
+var occupancyGrid = [];
 
 ///////////////
 /// CLASSES ///
@@ -144,15 +149,26 @@ function setup() {
 		keyupHandler(e);
 	});
 
+	//World parameters
 	pixelsPerMeter = window.innerWidth / worldScale;
 	worldWidth = canvasSize[0] * window.innerWidth / pixelsPerMeter;
 	worldHeight = canvasSize[1] * window.innerHeight / pixelsPerMeter;
 	worldMaxX = worldWidth / 2;
 	worldMaxY = worldHeight / 2;
 
-	// Create the canvas contexts
+	//Occupancy grid parameters
+	gridWidth = Math.ceil(worldWidth / cellWidth);
+	gridHeight = Math.ceil(worldHeight / cellWidth);
+	if(gridWidth % 2 == 0) {
+		++gridWidth;
+	}
+	if(gridHeight % 2 == 0) {
+		++gridHeight;
+	}
+
+	//Create the canvas contexts
 	worldCtx = worldCanvas.getContext("2d");
-	mapCtx = worldCanvas.getContext("2d");
+	mapCtx = mapCanvas.getContext("2d");
 
 	resetCtx(worldCtx);
 	resetCtx(mapCtx);
@@ -281,6 +297,7 @@ function drawFrame() {
 	//Draw the robot onto the world
 	drawRobot(worldCtx, robotPose);
 	drawLidar(worldCtx);
+	drawGrid(mapCtx);
 }
 
 function reset() {
@@ -288,6 +305,7 @@ function reset() {
 	lidarEnds = [];
 	robotPose = new Pose([0, 0], 0);
 	robotPoseHistory = [];
+	constructGrid();
 	drawFrame();
 }
 function tick() {
@@ -544,6 +562,40 @@ function randomNormal(mu, sigma) {
 	var u2 = Math.random();
 	var z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 	return mu + (z0 * sigma);
+}
+
+function drawGrid(ctx) {
+	for(var i=0; i<occupancyGrid.length; ++i) {
+		for(var j=0; j<occupancyGrid[i].length; ++j) {
+			var intColor = Math.floor(occupancyGrid[i][j] * 256);
+			var hexColor = intColor.toString(16);
+			var colorCode = "#" + String(hexColor) + String(hexColor) + String(hexColor);
+			ctx.fillStyle = colorCode;
+
+			var pos = gridIdxToXY(i, j);
+			ctx.fillRect(pos[0] - cellWidth, pos[1] - cellWidth, cellWidth, cellWidth);
+			ctx.fill();
+		}
+	}
+}
+function constructGrid() {
+	occupancyGrid = [];
+	for(var i=0; i<gridHeight; ++i) {
+		occupancyGrid.push([]);
+		for(var j=0; j<gridWidth; ++j) {
+			occupancyGrid[i].push(0.5);
+		}
+	}
+}
+function gridIdxToXY(i, j) {
+	var x = (j - ((gridWidth-1)/2)) * cellWidth;
+	var y = (((gridHeight-1)/2) - i) * cellWidth;
+	return [x, y];
+}
+function xyToGridIdx(pos) {
+	var j = Math.round(pos[0] / cellWidth) + ((gridWidth-1)/2);
+	var i = ((gridHeight-1)/2) - Math.round(pos[1] / cellWidth);
+	return [i, j];
 }
 
 /////////////////////
