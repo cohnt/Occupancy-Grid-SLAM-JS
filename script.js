@@ -328,6 +328,24 @@ function generateWorld() {
 			obstacleSegments.push(segments[j]);
 		}
 	}
+
+	//Add in the outer walls
+	obstacleSegments.push([
+		[worldMaxX, worldMaxY],
+		[worldMaxX, -1*worldMaxY]
+	]);
+	obstacleSegments.push([
+		[worldMaxX, -1*worldMaxY],
+		[-1*worldMaxX, -1*worldMaxY]
+	]);
+	obstacleSegments.push([
+		[-1*worldMaxX, -1*worldMaxY],
+		[-1*worldMaxX, worldMaxY]
+	]);
+	obstacleSegments.push([
+		[-1*worldMaxX, worldMaxY],
+		[worldMaxX, worldMaxY]
+	]);
 }
 
 function updateRobotPos(dt) {
@@ -388,9 +406,6 @@ function updateRobotPos(dt) {
 	robotPose.pos[1] += posChange[1];
 }
 function isColliding(pos) {
-	if(Math.abs(pos[0]) > worldMaxX || Math.abs(pos[1]) > worldMaxY) {
-		return true;
-	}
 	for(var i=0; i<obstacleSegments.length; ++i) {
 		if(lineCircleCollisionTest(obstacleSegments[i], pos, robotRadius)) {
 			return true;
