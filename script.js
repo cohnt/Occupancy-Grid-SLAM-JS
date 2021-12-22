@@ -25,6 +25,7 @@ var maxLog = 5;
 var minLog = -5;
 var distMax = Infinity;
 var eps = 0.00001;
+var worldWallInnerOffset = 1; //Given in pixels.
 
 var numParticles = 250; //Number of samples to use for the particle filter.
 var particlePosNoiseVariance = 0.01; //The variance of the diffusion noise added to the position during resampling.
@@ -570,21 +571,23 @@ function updateObstacleSegments() {
 	}
 
 	//Add in the outer walls
+	var wallBoundaryX = worldMaxX - (worldWallInnerOffset / pixelsPerMeter);
+	var wallBoundaryY = worldMaxY - (worldWallInnerOffset / pixelsPerMeter);
 	obstacleSegments.push([
-		[worldMaxX, worldMaxY],
-		[worldMaxX, -1*worldMaxY]
+		[wallBoundaryX, wallBoundaryY],
+		[wallBoundaryX, -1*wallBoundaryY]
 	]);
 	obstacleSegments.push([
-		[worldMaxX, -1*worldMaxY],
-		[-1*worldMaxX, -1*worldMaxY]
+		[wallBoundaryX, -1*wallBoundaryY],
+		[-1*wallBoundaryX, -1*wallBoundaryY]
 	]);
 	obstacleSegments.push([
-		[-1*worldMaxX, -1*worldMaxY],
-		[-1*worldMaxX, worldMaxY]
+		[-1*wallBoundaryX, -1*wallBoundaryY],
+		[-1*wallBoundaryX, wallBoundaryY]
 	]);
 	obstacleSegments.push([
-		[-1*worldMaxX, worldMaxY],
-		[worldMaxX, worldMaxY]
+		[-1*wallBoundaryX, wallBoundaryY],
+		[wallBoundaryX, wallBoundaryY]
 	]);
 }
 
