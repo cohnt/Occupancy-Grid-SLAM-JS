@@ -572,7 +572,7 @@ function randomNormal(mu, sigma) {
 function drawGrid(ctx) {
 	for(var i=0; i<occupancyGrid.length; ++i) {
 		for(var j=0; j<occupancyGrid[i].length; ++j) {
-			var notLogProb = 1 - (1 / (1 + Math.exp(occupancyGrid[i][j])))
+			var notLogProb = (1 / (1 + Math.exp(occupancyGrid[i][j])));
 			var intColor = Math.floor(notLogProb * 256);
 			var hexColor = intColor.toString(16);
 			var colorCode = "#" + String(hexColor) + String(hexColor) + String(hexColor);
