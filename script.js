@@ -42,6 +42,7 @@ var worldMaxY; //The maximum y coordinate shown in the world, i.e., worldHeight/
 var obstacles = []; //A list of obstacle objects
 var obstacleSegments = []; //A list of all segments of all obstacles
 var robotPose;
+var robotPoseHistory = [];
 var lastFrameTime;
 var lidarDistances = []; //When simulating what the LIDAR sensor would see, this contains all of the distance readings.
 var lidarEnds = []; //The endpoints of each LIDAR beam.
@@ -286,6 +287,7 @@ function reset() {
 	lidarDistances = [];
 	lidarEnds = [];
 	robotPose = new Pose([0, 0], 0);
+	robotPoseHistory = [];
 	drawFrame();
 }
 function tick() {
@@ -309,6 +311,8 @@ function tick() {
 	computeLidarEndpoints(robotPose);
 
 	drawFrame();
+
+	robotPoseHistory.push(JSON.parse(JSON.stringify(robotPose)));
 
 	requestAnimationFrame(tick);
 }
