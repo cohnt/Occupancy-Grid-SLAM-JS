@@ -14,6 +14,9 @@ var obstacleSizeRange = [0.5, 2];
 var numObstacles = 15;
 var robotSpeed = 1; // Robot speed, in meters per second
 var robotTurnRate = 180 * (Math.PI / 180); // Robot turn rate, in radians per second
+var lidarNumPoints = 25; // Number of points given in each sweep of the lidar
+var lidarFOV = 180 * (Math.PI / 180); // FOV of the lidar, in radians
+var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -39,6 +42,8 @@ var obstacles = []; //A list of obstacle objects
 var obstacleSegments = []; //A list of all segments of all obstacles
 var robotPose;
 var lastFrameTime;
+var lidarDistances = []; //When simulating what the LIDAR sensor would see, this contains all of the distance readings.
+var lidarEnds = []; //The endpoints of each LIDAR beam.
 
 ///////////////
 /// CLASSES ///
@@ -255,6 +260,15 @@ function drawRobot(ctx, pose) {
 	ctx.lineTo(front[0], front[1]);
 	ctx.stroke();
 }
+function drawLidar(ctx) {
+	ctx.strokeStyle = lidarStrokeStyle;
+	ctx.beginPath();
+	for(var i=0; i<lidarEnds.length; ++i) {
+		ctx.moveTo(robotPose.pos[0], robotPose.pos[1]);
+		ctx.lineTo(lidarEnds[i][0], lidarEnds[i][1]);
+	}
+	ctx.stroke();
+}
 function drawFrame() {
 	clearCanvas(worldCtx);
 
@@ -264,6 +278,7 @@ function drawFrame() {
 	}
 	//Draw the robot onto the world
 	drawRobot(worldCtx, robotPose);
+	drawLidar(worldCtx);
 }
 
 function reset() {
@@ -286,6 +301,7 @@ function tick() {
 	lastFrameTime += dt;
 
 	updateRobotPos(dt);
+	computeLidarDists(robotPose);
 
 	drawFrame();
 
@@ -385,7 +401,48 @@ function isColliding(pos) {
 	}
 	return false;
 }
+function computeLidarDists(pose) {
+	lidarDistances = [];
+	lidarEnds = [];
+	for(var lidarIdx=0; lidarIdx<lidarNumPoints; ++lidarIdx) {
+		var robotFrameAngle = (-lidarFOV / 2) + (lidarIdx * lidarAngle);
+		var globalFrameAngle = robotFrameAngle + pose.orien;
+		var dx = Math.cos(globalFrameAngle) * (worldWidth + worldHeight) * 43;
+		var dy = Math.sin(globalFrameAngle) * (worldWidth + worldHeight) * 43;
+		var lidarBeam = [
+			pose.pos.slice(),
+			[
+				pose.pos[0] + dx,
+				pose.pos[1] + dy
+			]
+		];
 
+		var found = false;
+		var bestDist = Infinity;
+		var bestIntersection = lidarBeam[1];
+		for(var i=0; i<obstacleSegments.length; ++i) {
+			var intersection = lineLineIntersection(obstacleSegments[i], lidarBeam);
+			if(intersection) {
+				found = true;
+				var dist = distance(pose.pos, intersection);
+				if(dist < bestDist) {
+					bestDist = dist;
+					bestIntersection = intersection.slice();
+				}
+			}
+		}
+		lidarDistances.push(bestDist);
+		lidarEnds.push(bestIntersection)
+	}
+}
+
+function distance(p1, p2) {
+	var total = 0;
+	for(var i=0; i<p1.length; ++i) {
+		total += Math.pow(p1[i]-p2[i], 2)
+	}
+	return Math.sqrt(total);
+}
 function lineCircleCollisionTest(line, circleCenter, radius) {
 	// https://stackoverflow.com/a/37225895/
 	var v1, v2, v3, u;
@@ -413,6 +470,37 @@ function lineCircleCollisionTest(line, circleCenter, radius) {
 	v2[1] *= v2[1];
 	return Math.min(Math.sqrt(v2[1] + v2[0]), Math.sqrt(v3[1] + v3[0])) < radius; // return smaller of two distances as the result
 }
+function lineLineIntersection(l1, l2) {
+	// https://stackoverflow.com/a/54866504/
+	var pointA = l1[0];
+	var pointB = l1[1];
+	var pointC = l2[0];
+	var pointD = l2[1];
+	var z1 = (pointA[0] - pointB[0]);
+	var z2 = (pointC[0] - pointD[0]);
+	var z3 = (pointA[1] - pointB[1]);
+	var z4 = (pointC[1] - pointD[1]);
+	var dist = z1 * z4 - z3 * z2;
+	if (dist == 0) {
+		return false;
+	}
+	var tempA = (pointA[0] * pointB[1] - pointA[1] * pointB[0]);
+	var tempB = (pointC[0] * pointD[1] - pointC[1] * pointD[0]);
+	var xCoor = (tempA * z2 - z1 * tempB) / dist;
+	var yCoor = (tempA * z4 - z3 * tempB) / dist;
+
+	if (xCoor < Math.min(pointA[0], pointB[0]) || xCoor > Math.max(pointA[0], pointB[0]) ||
+		xCoor < Math.min(pointC[0], pointD[0]) || xCoor > Math.max(pointC[0], pointD[0])) {
+		return false;
+	}
+	if (yCoor < Math.min(pointA[1], pointB[1]) || yCoor > Math.max(pointA[1], pointB[1]) ||
+		yCoor < Math.min(pointC[1], pointD[1]) || yCoor > Math.max(pointC[1], pointD[1])) {
+		return false;
+	}
+
+	return [xCoor, yCoor];
+}
+
 
 /////////////////////
 /// EXECUTED CODE ///
