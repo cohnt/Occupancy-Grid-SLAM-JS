@@ -22,7 +22,7 @@ var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
 var distMax = 30;
 
-var numParticles = 100; //Number of samples to use for the particle filter.
+var numParticles = 250; //Number of samples to use for the particle filter.
 var particlePosNoiseVariance = 0.02; //The variance of the diffusion noise added to the position during resampling.
 var particleOrientationNoiseVariance = 5 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
 var explorationFactor = 0; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
@@ -704,6 +704,10 @@ function bresenham(lidarBeam) {
 	//https://stackoverflow.com/a/4672319
 	var passedCoords = [];
 
+	if(isNaN(p1[0]) || isNaN(p1[1]) || isNaN(p2[0]) || isNaN(p2[1])) {
+		return passedCoords;
+	}
+
 	var dx = Math.abs(p2[0]-p1[0]);
 	var dy = Math.abs(p2[1]-p1[1]);
 	var sx = (p1[0] < p2[0]) ? 1 : -1;
@@ -713,7 +717,12 @@ function bresenham(lidarBeam) {
 	var i = p1[0];
 	var j = p1[1];
 
+	loopCount = 0
 	while(true) {
+		++loopCount;
+		if(loopCount > 1000) {
+			alert("UH OH")
+		}
 		if(i >= gridHeight || i < 0 || j >= gridWidth || j < 0) {
 			break;
 		}
@@ -749,6 +758,9 @@ function updateOccupancyGrid(pose) {
 	}
 	for(var i=0; i<lidarBeams.length; ++i) {
 		var passedCoords = bresenham(lidarBeams[i]);
+		if(passedCoords.length == 0) {
+			continue
+		}
 		
 		var lastIdx = passedCoords.length - 1;
 		var lastCoord = passedCoords[lastIdx];
