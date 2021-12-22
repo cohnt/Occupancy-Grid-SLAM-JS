@@ -49,6 +49,7 @@ var mapCanvas; //HTML element object of the map canvas
 var worldCtx; //Canvas drawing context of the world canvas
 var mapCtx; //Canvas drawing context of the map context
 var keyStates = {}; //Status of each (keyboard) key
+var parameterElts = []; // Contains the html elements for the parameter text fields
 
 var hasStarted = false; //Used for the control of the tick loop.
 var running = false; //Used for the control of the tick loop.
@@ -233,6 +234,14 @@ function setup() {
 		worldCanvasMouseLeaveHandler(e);
 	})
 
+	//This gathers all of the <textarea> elements used to specify experimental parameters.
+	//Class name is not unique, so document.getElementsByClassName returns a list-like object.
+	var parElts = document.getElementsByClassName("parameterForm");
+	//Convert the list-like object to an actual list.
+	for(var i=0; i<parElts.length; ++i) {
+		parameterElts.push(parElts[i]);
+	}
+
 	//World parameters
 	pixelsPerMeter = window.innerWidth / worldScale;
 	worldWidth = canvasSize[0] * window.innerWidth / pixelsPerMeter;
@@ -266,6 +275,7 @@ function startButtonClick() {
 	if(!running && !hasStarted) {
 		//If we aren't already running, and we haven't started yet, start for the first time.
 		reset();
+		readonly(true); //Prevent the user from changing the parameters while it's running.
 		running = true;
 		hasStarted = true;
 		lastFrameTime = null;
@@ -291,6 +301,7 @@ function pauseButtonClick() {
 function resetButtonClick() {
 	//This is the callback function if you click the reset button.
 	if(!running) {
+		readonly(false);
 		hasStarted = false;
 		moved = false;
 		reset(); //Get everything back to its initial state.
@@ -301,6 +312,7 @@ function newWorldButtonClick() {
 	if(!running) {
 		//If we aren't currently running, generate a new world, and reset.
 		//resetContext() isn't needed, because the canvas itself isn't changing.
+		readonly(false);
 		hasStarted = false;
 		moved = false;
 		clearWorld();
@@ -358,6 +370,20 @@ function worldCanvasMouseUpHandler(e) {
 function worldCanvasMouseLeaveHandler(e) {
 	if(draggingObstacle) {
 		draggingObstacle = false;
+	}
+}
+function readonly(doMakeReadonly) {
+	//This function is used to toggle whether or not you can modify the various parameter settings.
+	//doMakeReadonly determines which setting to use (true or false).
+	for(var i=0; i<parameterElts.length; ++i) {
+		if(doMakeReadonly) {
+			parameterElts[i].readOnly = "true"; //This makes it so you can't modify it.
+			parameterElts[i].style.color = "grey"; //This just looks better.
+		}
+		else {
+			parameterElts[i].removeAttribute("readonly"); //To make something not readonly, you have to actually remove the attribute.
+			parameterElts[i].style.color = "black"; //Return to default styling.
+		}
 	}
 }
 
