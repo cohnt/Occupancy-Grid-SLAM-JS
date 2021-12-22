@@ -461,9 +461,10 @@ function computeLidarEndpoints(pose) {
 	for(var i=0; i<lidarDistances.length; ++i) {
 		var robotFrameAngle = (-lidarFOV / 2) + (i * lidarAngle);
 		var globalFrameAngle = robotFrameAngle + pose.orien;
+		var dist = lidarDistances[i] == Infinity ? 43*(worldWidth + worldHeight) : lidarDistances[i];
 		lidarEnds.push([
-			pose.pos[0] + (lidarDistances[i] * Math.cos(globalFrameAngle)),
-			pose.pos[1] + (lidarDistances[i] * Math.sin(globalFrameAngle))
+			pose.pos[0] + (dist * Math.cos(globalFrameAngle)),
+			pose.pos[1] + (dist * Math.sin(globalFrameAngle))
 		]);
 	}
 }
