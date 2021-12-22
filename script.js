@@ -14,8 +14,8 @@ var obstacleSizeRange = [0.5, 2];
 var numObstacles = 15;
 var robotSpeed = 1; // Robot speed, in meters per second
 var robotTurnRate = 180 * (Math.PI / 180); // Robot turn rate, in radians per second
-var lidarNumPoints = 25; // Number of points given in each sweep of the lidar
-var lidarFOV = 180 * (Math.PI / 180); // FOV of the lidar, in radians
+var lidarNumPoints = 50; // Number of points given in each sweep of the lidar
+var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 
 ////////////////////////
@@ -282,6 +282,8 @@ function drawFrame() {
 }
 
 function reset() {
+	lidarDistances = [];
+	lidarEnds = [];
 	robotPose = new Pose([0, 0], 0);
 	drawFrame();
 }
