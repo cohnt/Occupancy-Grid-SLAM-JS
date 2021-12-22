@@ -19,6 +19,7 @@ var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar measurements, in meters.
 var cellWidth = 0.05; //The width of each occupancy grid cell, in meters
+var occupancyTrust = 4;
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -331,6 +332,9 @@ function tick() {
 
 	drawFrame();
 
+	estPose = robotPose; //TODO: Use MCL instead of just copying the robot's pose
+	updateOccupancyGrid(estPose);
+
 	robotPoseHistory.push(JSON.parse(JSON.stringify(robotPose)));
 
 	requestAnimationFrame(tick);
@@ -568,7 +572,8 @@ function randomNormal(mu, sigma) {
 function drawGrid(ctx) {
 	for(var i=0; i<occupancyGrid.length; ++i) {
 		for(var j=0; j<occupancyGrid[i].length; ++j) {
-			var intColor = Math.floor(occupancyGrid[i][j] * 256);
+			var notLogProb = 1 - (1 / (1 + Math.exp(occupancyGrid[i][j])))
+			var intColor = Math.floor(notLogProb * 256);
 			var hexColor = intColor.toString(16);
 			var colorCode = "#" + String(hexColor) + String(hexColor) + String(hexColor);
 			ctx.fillStyle = colorCode;
@@ -600,6 +605,7 @@ function xyToGridIdx(pos) {
 }
 function bresenham(lidarBeam) {
 	//Returns a list of grid cells passed over by the lidar beam, in the form of index pairs [row, col]
+	//Stops when it reaches the endpoint, or when it leaves the map
 	var p1 = xyToGridIdx(lidarBeam[0]);
 	var p2 = xyToGridIdx(lidarBeam[1]);
 	//https://stackoverflow.com/a/4672319
@@ -611,26 +617,62 @@ function bresenham(lidarBeam) {
 	var sy = (p1[1] < p2[1]) ? 1 : -1;
 	var err = dx - dy;
 
-	var x = p1[0];
-	var y = p1[1];
+	var i = p1[0];
+	var j = p1[1];
 
 	while(true) {
-		passedCoords.push([x, y]);
-		if(x == p2[0] && y == p2[1]) {
+		if(i >= gridHeight || i < 0 || j >= gridWidth || j < 0) {
+			break;
+		}
+		passedCoords.push([i, j]);
+		if(i == p2[0] && j == p2[1]) {
 			break;
 		}
 		var err2 = 2*err;
 		if(err2 > -dy) {
 			err -= dy;
-			x += sx;
+			i += sx;
 		}
 		if(err2 < dx) {
 			err += dx;
-			y += sy;
+			j += sy;
 		}
 	}
 
 	return passedCoords;
+}
+function updateOccupancyGrid(pose) {
+	var lidarBeams = [];
+	for(var i=0; i<lidarDistances.length; ++i) {
+		lidarBeams.push([]);
+		lidarBeams[i].push(pose.pos.slice());
+		var robotFrameAngle = (-lidarFOV / 2) + (i * lidarAngle);
+		var globalFrameAngle = robotFrameAngle + pose.orien;
+		var dist = lidarDistances[i] == Infinity ? 43*(worldWidth + worldHeight) : lidarDistances[i];
+		lidarBeams[i].push([
+			pose.pos[0] + (dist * Math.cos(globalFrameAngle)),
+			pose.pos[1] + (dist * Math.sin(globalFrameAngle))
+		]);
+	}
+	console.log(lidarBeams.length);
+	for(var i=0; i<lidarBeams.length; ++i) {
+		var passedCoords = bresenham(lidarBeams[i]);
+		
+		var lastIdx = passedCoords.length - 1;
+		var lastCoord = passedCoords[lastIdx];
+		var endPoint = xyToGridIdx(lidarBeams[i][1]);
+		passedCoords.pop();
+		
+		//https://natanaso.github.io/ece276a2019/ref/ECE276A_9_PF_SLAM.pdf
+
+		//Update last coordinate to increase probability of occupancy
+		occupancyGrid[lastCoord[0]][lastCoord[1]] += Math.log(occupancyTrust);
+
+		//Update rest of the coordinates to decrease probability of occupancy
+		for(var j=0; j<passedCoords.length; ++j) {
+			occupancyGrid[passedCoords[j][0]][passedCoords[j][1]] -= Math.log(occupancyTrust);
+		}
+	}
 }
 
 /////////////////////
