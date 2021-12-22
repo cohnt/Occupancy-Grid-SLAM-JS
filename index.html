@@ -197,7 +197,7 @@
 						odomPosNoiseVar = Number(elt.value);
 					}
 				})(this)">0.005</textarea></td>
-				<td>The noise added to the odometry's position readings, in meters. Must be non-negative.</td>
+				<td>The variance (normally-distributed) noise added to the odometry's position readings, in meters. Must be non-negative.</td>
 			</tr>
 			<tr>
 				<td>Odometry Noise Variance (Orientation)</td>
@@ -206,7 +206,7 @@
 						odomOrienNoiseVar = Number(elt.value) * (Math.PI / 180); //Internally, this is stored in radians, but radians are harder to type in than degrees.
 					}
 				})(this)">1</textarea></td>
-				<td>The noise added to the odometry's orientation readings, in degrees. Must be non-negative.</td>
+				<td>The variance (normally-distributed) noise added to the odometry's orientation readings, in degrees. Must be non-negative.</td>
 			</tr>
 
 			<tr><td>&nbsp;</td></tr>
@@ -259,6 +259,63 @@
 
 			<tr><td>&nbsp;</td></tr>
 			<tr><th>Particle Filter Properties</th></tr>
+			<tr>
+				<td>Number of Particles</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 0) {
+						if(Number(elt.value) == Math.floor(Number(elt.value))) {
+							numParticles = Number(elt.value);
+							reset();
+						}
+					}
+				})(this)">250</textarea></td>
+				<td>The number of particles used in the particle filter. Must be a positive integer.</td>
+			</tr>
+			<tr>
+				<td>Particle Noise Variance (Position)</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0) {
+						particlePosNoiseVariance = Number(elt.value);
+					}
+				})(this)">0.01</textarea></td>
+				<td>The variance (normally-distributed) noise added to the particles' position readings, in meters. Must be non-negative.</td>
+			</tr>
+			<tr>
+				<td>Particle Noise Variance (Orientation)</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0) {
+						particleOrientationNoiseVariance = Number(elt.value) * (Math.PI / 180); //Internally, this is stored in radians, but radians are harder to type in than degrees.
+					}
+				})(this)">2.5</textarea></td>
+				<td>The variance (normally-distributed) noise added to the particles' orientation readings, in degrees. Must be non-negative.</td>
+			</tr>
+			<tr>
+				<td>Particle Exploration Factor</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0 && Number(elt.value) <= 0.5) {
+						explorationFactor = Number(elt.value);
+					}
+				})(this)">0</textarea></td>
+				<td>The proportion of exploration particles (uniformly distributed particles). Must be between 0 and 0.5 (inclusive).</td>
+			</tr>
+			<tr>
+				<td>Pose Estimation Method</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(elt.value == 1) {
+						useBestParticle = false;
+						useWeightedAverage = true;
+					}
+					else if(elt.value == 2) {
+						useBestParticle = false;
+						useWeightedAverage = false;
+					}
+					else if(elt.value == 3) {
+						useBestParticle = true;
+					}
+				})(this)">1</textarea></td>
+				<td>The method used to estimate the robot pose from the particle filter. 1 for the weighted average of the particles, 2 for the unweighted average of the particles, and 3 for the maximum likelihood particle.</td>
+			</tr>
+
 			<!-- <tr>
 				<td>Parameter</td>
 				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){

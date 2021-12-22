@@ -31,6 +31,7 @@ var particleOrientationNoiseVariance = 2.5 * (Math.PI / 180); //The variance of 
 var explorationFactor = 0; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
 var useExplorationParticlesGuess = false; //Whether or not to use exploration particles when estimating robot pose.
 var useBestParticle = false; //If true, just select the best particle as the ground truth, instead of averaging.
+var useWeightedAverage = true;
 
 var odomPosNoiseVar = 0.005;
 var odomOrienNoiseVar = 1 * (Math.PI / 180)
@@ -981,10 +982,10 @@ function makePrediction() {
 		for(var i=0; i<particles.length; ++i) {
 			if(!particles[i].isExploration || useExplorationParticlesGuess) {
 				//Check if a particle is exploration before using it in our estimate.
-				totalPos[0] += particles[i].pos[0] * particles[i].weight;
-				totalPos[1] += particles[i].pos[1] * particles[i].weight;
-				totalOrien += particles[i].orien * particles[i].weight;
-				totalWeight += particles[i].weight;
+				totalPos[0] += particles[i].pos[0] * (useWeightedAverage ? particles[i].weight : 1);
+				totalPos[1] += particles[i].pos[1] * (useWeightedAverage ? particles[i].weight : 1);
+				totalOrien += particles[i].orien * (useWeightedAverage ? particles[i].weight : 1);
+				totalWeight += (useWeightedAverage ? particles[i].weight : 1);
 			}
 		}
 		totalPos[0] /= totalWeight;
