@@ -859,7 +859,6 @@ function resample() {
 	//Resampling step. This implements importance sampling.
 	//It's implemented slightly strangely, because Javascript doesn't have a great math library.
 	var weightData = particles.map(a => a.weight);
-	var newParticles = [];
 	var cs = cumsum(weightData);
 	var step = 1/((numParticles * (1 - explorationFactor))+1);
 	var chkVal = step;
@@ -874,14 +873,13 @@ function resample() {
 		newPos[0] += randomNormal(0, particlePosNoiseVariance);
 		newPos[1] += randomNormal(0, particlePosNoiseVariance);
 		newOrien += randomNormal(0, particleOrientationNoiseVariance);
-		newParticles[i] = new Particle(newPos, newOrien);
+		particles[i] = new Particle(newPos, newOrien);
 	}
-	for(var i=newParticles.length; i<numParticles; ++i) {
+	for(var i=Math.floor(numParticles * (1 - explorationFactor)); i<numParticles; ++i) {
 		//Whatever particles haven't been resampled, are just randomly scattered to explore.
-		newParticles[i] = new Particle();
-		newParticles[i].randomize();
+		particles[i] = new Particle();
+		particles[i].randomize();
 	}
-	particles = newParticles.slice();
 }
 function noisifyParticles() {
 	for(var i=0; i<particles.length; ++i) {
