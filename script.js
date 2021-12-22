@@ -12,11 +12,12 @@ var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
 var obstacleSizeRange = [0.5, 2];
 var numObstacles = 15;
-var robotSpeed = 1; // Robot speed, in meters per second
-var robotTurnRate = 180 * (Math.PI / 180); // Robot turn rate, in radians per second
+var robotSpeed = 0.5; // Robot speed, in meters per second
+var robotTurnRate = 90 * (Math.PI / 180); // Robot turn rate, in radians per second
 var lidarNumPoints = 50; // Number of points given in each sweep of the lidar
 var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
+var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar measurements, in meters.
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -304,6 +305,8 @@ function tick() {
 
 	updateRobotPos(dt);
 	computeLidarDists(robotPose);
+	noisifyLidar();
+	computeLidarEndpoints(robotPose);
 
 	drawFrame();
 
@@ -439,12 +442,29 @@ function computeLidarDists(pose) {
 				var dist = distance(pose.pos, intersection);
 				if(dist < bestDist) {
 					bestDist = dist;
-					bestIntersection = intersection.slice();
 				}
 			}
 		}
 		lidarDistances.push(bestDist);
-		lidarEnds.push(bestIntersection)
+	}
+}
+function noisifyLidar() {
+	//This adds normally-distributed noise to a list of LIDAR readings.
+	for(var i=0; i<lidarDistances.length; ++i) {
+		lidarDistances[i] += randomNormal(0, lidarNoiseVariance);
+		if(lidarDistances[i] < 0) {
+			lidarDistances[i] = 0;
+		}
+	}
+}
+function computeLidarEndpoints(pose) {
+	for(var i=0; i<lidarDistances.length; ++i) {
+		var robotFrameAngle = (-lidarFOV / 2) + (i * lidarAngle);
+		var globalFrameAngle = robotFrameAngle + pose.orien;
+		lidarEnds.push([
+			pose.pos[0] + (lidarDistances[i] * Math.cos(globalFrameAngle)),
+			pose.pos[1] + (lidarDistances[i] * Math.sin(globalFrameAngle))
+		]);
 	}
 }
 
@@ -512,7 +532,14 @@ function lineLineIntersection(l1, l2) {
 
 	return [xCoor, yCoor];
 }
-
+function randomNormal(mu, sigma) {
+	//Computed using the Box-Muller transform.
+	//https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+	var u1 = Math.random();
+	var u2 = Math.random();
+	var z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+	return mu + (z0 * sigma);
+}
 
 /////////////////////
 /// EXECUTED CODE ///
