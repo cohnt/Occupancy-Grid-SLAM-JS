@@ -55,7 +55,7 @@
 			<tr>
 				<td>World Size</td>
 				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
-					if(Number(elt.value) > 10) {
+					if(Number(elt.value) >= 10) {
 						worldScale = Number(elt.value);
 						pixelsPerMeter = window.innerWidth / worldScale;
 						worldWidth = canvasSize[0] * window.innerWidth / pixelsPerMeter;
@@ -85,8 +85,58 @@
 						reset();
 					}
 				})(this)">40</textarea></td>
-				<td>The size/scaling of the world, with respect to the width of the browser.</td>
+				<td>The size/scaling of the world, with respect to the width of the browser. Must be no smaller than 10.</td>
 			</tr>
+			<tr>
+				<td>Number of Obstacles</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) >= 0) {
+						if(Number(elt.value) == Math.floor(Number(elt.value))) {
+							numObstacles = Number(elt.value);
+							clearWorld();
+							generateWorld();
+							reset();
+						}
+					}
+				})(this)">40</textarea></td>
+				<td>The number of obstacles. Must be a non-negative integer.</td>
+			</tr>
+			<tr>
+				<td>Minimum Obstacle Size</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 0) {
+						if(Number(elt.value) < obstacleSizeRange[1]) {
+							obstacleSizeRange[0] = Number(elt.value);
+							clearWorld();
+							generateWorld();
+							reset();
+						}
+					}
+				})(this)">0.5</textarea></td>
+				<td>Minimum obstacle size. Must be greater than zero and smaller than the maximum obstacle size.</td>
+			</tr>
+			<tr>
+				<td>Maximum Obstacle Size</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 0) {
+						if(Number(elt.value) > obstacleSizeRange[0]) {
+							obstacleSizeRange[1] = Number(elt.value);
+							clearWorld();
+							generateWorld();
+							reset();
+						}
+					}
+				})(this)">2.5</textarea></td>
+				<td>Maximum obstacle size. Must be greater than zero and greater than the maximum obstacle size.</td>
+			</tr>
+			<tr><td>&nbsp;</td></tr>
+			<tr><th>Robot Properties</th></tr>
+
+			<tr><td>&nbsp;</td></tr>
+			<tr><th>Occupancy Grid Properties</th></tr>
+
+			<tr><td>&nbsp;</td></tr>
+			<tr><th>Particle Filter Properties</th></tr>
 			<!-- <tr>
 				<td>Parameter</td>
 				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
