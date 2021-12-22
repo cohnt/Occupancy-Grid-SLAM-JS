@@ -3,22 +3,22 @@
 /////////////////
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
-var worldScale = 20; //The width of the entire browser viewport (in meters), determining the scale of the displays
+var worldScale = 40; //The width of the entire browser viewport (in meters), determining the scale of the displays
 var canvasLineWidth = 0.015;
 var robotRadius = 0.2;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
 var robotStrokeStyle = "black";
 var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
-var obstacleSizeRange = [0.5, 1.5];
-var numObstacles = 25;
+var obstacleSizeRange = [0.5, 2.5];
+var numObstacles = 50;
 var robotSpeed = 1.0; // Robot speed, in meters per second
 var robotTurnRate = 120 * (Math.PI / 180); // Robot turn rate, in radians per second
 var lidarNumPoints = 40; // Number of points given in each sweep of the lidar
 var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 var lidarNoiseVariance = 0.05; //The variance of the noise affecting the lidar measurements, in meters.
-var cellWidth = 0.05; //The width of each occupancy grid cell, in meters
+var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
 
 ////////////////////////
@@ -52,6 +52,8 @@ var lidarEnds = []; //The endpoints of each LIDAR beam.
 var gridWidth;
 var gridHeight;
 var occupancyGrid = [];
+
+var estRobotPose;
 
 ///////////////
 /// CLASSES ///
@@ -299,6 +301,8 @@ function drawFrame() {
 	//Draw the robot onto the world
 	drawRobot(worldCtx, robotPose);
 	drawLidar(worldCtx);
+	
+	drawRobot(mapCtx, estRobotPose);
 	drawGrid(mapCtx);
 }
 
@@ -306,6 +310,7 @@ function reset() {
 	lidarDistances = [];
 	lidarEnds = [];
 	robotPose = new Pose([0, 0], 0);
+	estRobotPose = robotPose;
 	robotPoseHistory = [];
 	constructGrid();
 	drawFrame();
@@ -332,8 +337,8 @@ function tick() {
 
 	drawFrame();
 
-	estPose = robotPose; //TODO: Use MCL instead of just copying the robot's pose
-	updateOccupancyGrid(estPose);
+	estRobotPose = robotPose; //TODO: Use MCL instead of just copying the robot's pose
+	updateOccupancyGrid(estRobotPose);
 
 	robotPoseHistory.push(JSON.parse(JSON.stringify(robotPose)));
 
