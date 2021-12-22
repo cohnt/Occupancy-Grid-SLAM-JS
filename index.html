@@ -233,10 +233,19 @@
 				<td>Occupancy Trust Factor</td>
 				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
 					if(Number(elt.value) > 1) {
-						occupancyTrust = Number(elt.value);
+						obstacleTrust = Number(elt.value);
 					}
 				})(this)">4</textarea></td>
-				<td>A factor affecting how much the occupancy grid trusts new observations. Must be greater than 1.</td>
+				<td>A factor affecting how much the occupancy grid trusts new observations of obstacles. Must be greater than 1.</td>
+			</tr>
+			<tr>
+				<td>Occupancy Trust Factor</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(Number(elt.value) > 1) {
+						clearTrust = Number(elt.value);
+					}
+				})(this)">2</textarea></td>
+				<td>A factor affecting how much the occupancy grid trusts new observations of no obstacles. Must be greater than 1.</td>
 			</tr>
 			<tr>
 				<td>Minimum Log-Prop</td>

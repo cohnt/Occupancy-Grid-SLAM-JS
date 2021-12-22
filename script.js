@@ -19,7 +19,8 @@ var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 var lidarNoiseVariance = 0.025; //The variance of the noise affecting the lidar measurements, in meters.
 var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
-var occupancyTrust = 4;
+var obstacleTrust = 4;
+var clearTrust = 2;
 var maxLog = 5;
 var minLog = -5;
 var distMax = Infinity;
@@ -886,11 +887,11 @@ function updateOccupancyGrid(pose) {
 		//https://natanaso.github.io/ece276a2019/ref/ECE276A_9_PF_SLAM.pdf
 
 		//Update last coordinate to increase probability of occupancy
-		occupancyGrid[lastCoord[0]][lastCoord[1]] += Math.log(occupancyTrust);
+		occupancyGrid[lastCoord[0]][lastCoord[1]] += Math.log(obstacleTrust);
 
 		//Update rest of the coordinates to decrease probability of occupancy
 		for(var j=0; j<passedCoords.length; ++j) {
-			occupancyGrid[passedCoords[j][0]][passedCoords[j][1]] -= Math.log(occupancyTrust);
+			occupancyGrid[passedCoords[j][0]][passedCoords[j][1]] -= Math.log(clearTrust);
 		}
 	}
 	for(var i=0; i<occupancyGrid.length; ++i) {
