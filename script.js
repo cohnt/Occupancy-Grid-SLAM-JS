@@ -3,7 +3,7 @@
 /////////////////
 
 var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
-var worldScale = 40; //The width of the entire browser viewport (in meters), determining the scale of the displays
+var worldScale = 30; //The width of the entire browser viewport (in meters), determining the scale of the displays
 var canvasLineWidth = 0.015;
 var robotRadius = 0.2;
 var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the triangular robot marker
@@ -14,23 +14,25 @@ var obstacleSizeRange = [0.5, 2.5];
 var numObstacles = 50;
 var robotSpeed = 1.0; // Robot speed, in meters per second
 var robotTurnRate = 120 * (Math.PI / 180); // Robot turn rate, in radians per second
-var lidarNumPoints = 40; // Number of points given in each sweep of the lidar
+var lidarNumPoints = 60; // Number of points given in each sweep of the lidar
 var lidarFOV = 360 * (Math.PI / 180); // FOV of the lidar, in radians
 var lidarAngle = lidarFOV / (lidarNumPoints - 1); // The angle between two lidar beams
 var lidarNoiseVariance = 0.025; //The variance of the noise affecting the lidar measurements, in meters.
 var cellWidth = 0.1; //The width of each occupancy grid cell, in meters
 var occupancyTrust = 4;
+var maxLog = 5;
+var minLog = -5;
 var distMax = 30;
 
 var numParticles = 250; //Number of samples to use for the particle filter.
-var particlePosNoiseVariance = 0.02; //The variance of the diffusion noise added to the position during resampling.
-var particleOrientationNoiseVariance = 5 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
+var particlePosNoiseVariance = 0.01; //The variance of the diffusion noise added to the position during resampling.
+var particleOrientationNoiseVariance = 2.5 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
 var explorationFactor = 0; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
 var useExplorationParticlesGuess = false; //Whether or not to use exploration particles when estimating robot pose.
 var useBestParticle = false; //If true, just select the best particle as the ground truth, instead of averaging.
 
-var odomPosNoiseVar = 0.01;
-var odomOrienNoiseVar = 2.5 * (Math.PI / 180)
+var odomPosNoiseVar = 0.005;
+var odomOrienNoiseVar = 1 * (Math.PI / 180)
 
 var particleDispRadius = 0.025; //Radius of the circle marker for each particle.
 var particleDispHeadingLength = 0.05; //Length of the direction marker for each particle.
@@ -164,7 +166,8 @@ function Particle(pos=[0,0], orien=0) {
 	}
 
 	this.isValid = function() {
-		return Math.abs(this.pos[0]) < worldMaxX && Math.abs(this.pos[1]) < worldMaxY;
+		// return Math.abs(this.pos[0]) < worldMaxX && Math.abs(this.pos[1]) < worldMaxY;
+		return true; //This was unhelpful
 	}
 
 	this.draw = function(ctx, maxWeight) {
@@ -777,6 +780,11 @@ function updateOccupancyGrid(pose) {
 			occupancyGrid[passedCoords[j][0]][passedCoords[j][1]] -= Math.log(occupancyTrust);
 		}
 	}
+	for(var i=0; i<occupancyGrid.length; ++i) {
+		for(var j=0; j<occupancyGrid[i].length; ++j) {
+			occupancyGrid[i][j] = Math.min(Math.max(occupancyGrid[i][j], minLog), maxLog);
+		}
+	}
 }
 
 function drawParticles() {
@@ -901,15 +909,17 @@ function noisifyParticles() {
 	}
 }
 function propogateParticles(dPos, dOrien) {
-	for(var i=0; i<particles.length; ++i) {
-		var randomDist = randomNormal(0, odomPosNoiseVar);
-		var randomAngle = Math.random() * Math.PI;
-		dPos[0] += randomDist * Math.cos(randomAngle);
-		dPos[1] += randomDist * Math.sin(randomAngle);
-		dOrien += randomNormal(0, odomOrienNoiseVar);
-		particles[i].pos[0] += dPos[0];
-		particles[i].pos[1] += dPos[1];
-		particles[i].orien += dOrien;
+	if(dPos[0] != 0 || dPos[1] != 0 || dOrien != 0) {
+		for(var i=0; i<particles.length; ++i) {
+			var randomDist = randomNormal(0, odomPosNoiseVar);
+			var randomAngle = Math.random() * Math.PI;
+			dPos[0] += randomDist * Math.cos(randomAngle);
+			dPos[1] += randomDist * Math.sin(randomAngle);
+			dOrien += randomNormal(0, odomOrienNoiseVar);
+			particles[i].pos[0] += dPos[0];
+			particles[i].pos[1] += dPos[1];
+			particles[i].orien += dOrien;
+		}
 	}
 }
 
