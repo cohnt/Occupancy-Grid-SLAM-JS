@@ -23,13 +23,13 @@ var occupancyTrust = 4;
 var distMax = 10;
 
 var numParticles = 100; //Number of samples to use for the particle filter.
-var particlePosNoiseVariance = 0.025; //The variance of the diffusion noise added to the position during resampling.
+var particlePosNoiseVariance = 0.05; //The variance of the diffusion noise added to the position during resampling.
 var particleOrientationNoiseVariance = 15 * (Math.PI / 180); //The variance of the diffusion noise added to the orientation during resampling.
 var explorationFactor = 0.05; //0.0 means no particles are randomly placed for exploration, 0.5 means 50%, 1.0 means 100%
 var useExplorationParticlesGuess = false; //Whether or not to use exploration particles when estimating robot pose.
 
-var particleDispRadius = 2; //Radius of the circle marker for each particle.
-var particleDispHeadingLength = 5; //Length of the direction marker for each particle.
+var particleDispRadius = 0.025; //Radius of the circle marker for each particle.
+var particleDispHeadingLength = 0.05; //Length of the direction marker for each particle.
 var errorWeightColorDivisor = 300; //Used when selecting the color to correspond with each particle.
 var weightColorMultiplier = 0.9; //Used when selecting the color to correspond with each particle.
 
@@ -68,6 +68,7 @@ var occupancyGrid = [];
 
 var estRobotPose;
 var particles = [];
+var maxWeight = 0;
 
 ///////////////
 /// CLASSES ///
@@ -160,6 +161,23 @@ function Particle(pos=[0,0], orien=0) {
 
 	this.isValid = function() {
 		return Math.abs(this.pos[0]) < worldMaxX && Math.abs(this.pos[1]) < worldMaxY;
+	}
+
+	this.draw = function(ctx, maxWeight) {
+		//We need to know maxWeight for weightToColor.
+		color = weightToColor(this.weight / maxWeight);
+		ctx.strokeStyle = color;
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		ctx.moveTo(this.pos[0], this.pos[1]);
+		ctx.arc(this.pos[0], this.pos[1], particleDispRadius, 0, 2*Math.PI, true);
+		ctx.closePath();
+		ctx.fill();
+		ctx.beginPath();
+		ctx.moveTo(this.pos[0], this.pos[1]);
+		ctx.lineTo(this.pos[0] + (particleDispHeadingLength*Math.cos(this.orien)),
+			this.pos[1] + (particleDispHeadingLength*Math.sin(this.orien)));
+		ctx.stroke();
 	}
 }
 
@@ -740,7 +758,9 @@ function updateOccupancyGrid(pose) {
 }
 
 function drawParticles() {
-	//
+	for(var i=0; i<particles.length; ++i) {
+		particles[i].draw(mapCtx, maxWeight)
+	}
 }
 function resetParticleFilter() {
 	particles = [];
@@ -779,9 +799,11 @@ function calculateWeights() {
 		}
 	}
 
+	maxWeight = 0;
 	combinedWeights = normalizeWeight(combinedWeights); //Normalize again.
 	for(var i=0; i<particles.length; ++i) {
 		particles[i].weight = combinedWeights[i]; //Update the particle weights.
+		maxWeight = Math.max(maxWeight, particles[i].weight);
 	}
 }
 function makePrediction() {
