@@ -29,6 +29,7 @@ var maxLog = 5;
 var minLog = -5;
 var distMax = Infinity;
 var eps = 0.00001;
+var omega = 1e12;
 var worldWallInnerOffset = 1; //Given in pixels.
 
 var numParticles = 250; //Number of samples to use for the particle filter.
@@ -46,6 +47,8 @@ var particleDispRadius = 0.025; //Radius of the circle marker for each particle.
 var particleDispHeadingLength = 0.05; //Length of the direction marker for each particle.
 var errorWeightColorDivisor = 300; //Used when selecting the color to correspond with each particle.
 var weightColorMultiplier = 0.9; //Used when selecting the color to correspond with each particle.
+
+var searchAlg = 0; //0 is BFS, 1 is DFS, 2 is A*
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -92,7 +95,10 @@ var draggingObstacle = false;
 var draggedObstacleOffset;
 var obstacleIdx;
 
-var goalPose = [];
+var goalPos = [];
+var goalIdx = [];
+var sg = [];
+var sgQueue = []; //Can be a stack for DFS, a queue for BFS, or a priority-queue for A*
 
 ///////////////
 /// CLASSES ///
@@ -409,8 +415,16 @@ function mapCanvasMouseDownHandler(e) {
 		if(hasStarted) {
 			var goalGrid = xyToGridIdx(mapMouseCoords);
 			if(occupancyGrid[goalGrid[0]][goalGrid[1]] < 0) {
-				goalPose = mapMouseCoords.slice();
+				goalPos = mapMouseCoords.slice();
+				goalIdx = xyToGridIdx(goalPos);
+				createSearchGraph();
+				var idx = xyToGridIdx(robotPose.pos)
+				sgQueue = [idx];
+				sg[idx[0]][idx[1]].queued = true;
+				sg[idx[0]][idx[1]].distance = 0;
+				sg[idx[0]][idx[1]].priority = heuristic(idx);
 				drawFrame();
+				requestAnimationFrame(iterateGraphSearch);
 			}
 		}
 	}
@@ -503,10 +517,10 @@ function drawGoalPose(ctx) {
 	ctx.strokeStyle = goalStrokeStyle;
 	ctx.beginPath();
 
-	ctx.moveTo(goalPose[0] - goalMarkerSize, goalPose[1] - goalMarkerSize);
-	ctx.lineTo(goalPose[0] + goalMarkerSize, goalPose[1] + goalMarkerSize);
-	ctx.moveTo(goalPose[0] - goalMarkerSize, goalPose[1] + goalMarkerSize);
-	ctx.lineTo(goalPose[0] + goalMarkerSize, goalPose[1] - goalMarkerSize);
+	ctx.moveTo(goalPos[0] - goalMarkerSize, goalPos[1] - goalMarkerSize);
+	ctx.lineTo(goalPos[0] + goalMarkerSize, goalPos[1] + goalMarkerSize);
+	ctx.moveTo(goalPos[0] - goalMarkerSize, goalPos[1] + goalMarkerSize);
+	ctx.lineTo(goalPos[0] + goalMarkerSize, goalPos[1] - goalMarkerSize);
 
 	ctx.stroke();
 }
@@ -531,7 +545,7 @@ function drawFrame() {
 		drawParticles(mapCtx);
 	}
 
-	if(goalPose.length > 0) {
+	if(goalPos.length > 0) {
 		drawGoalPose(worldCtx);
 		drawGoalPose(mapCtx);
 	}
@@ -549,6 +563,11 @@ function reset() {
 	robotEstPath = [];
 	robotPath.push(robotPose.pos.slice());
 	robotEstPath.push(estRobotPose.pos.slice());
+
+	goalPos = [];
+	goalIdx = [];
+	sg = [];
+	sgQueue = []; //Can be a stack for DFS, a queue for BFS, or a priority-queue for A*
 
 	drawFrame();
 }
@@ -1240,6 +1259,84 @@ function leftTopToXY(left, top) {
 	var x = (left / pixelsPerMeter) - worldMaxX;
 	var y = worldMaxY - (top / pixelsPerMeter);
 	return [x,y];
+}
+
+function createSearchGraph() {
+	sg = [];
+	for(var i=0; i<occupancyGrid.length; ++i) {
+		sg.push([]);
+		for(var j=0; j<occupancyGrid[i].length; ++j) {
+			sg[i].push({});
+			var logProb = occupancyGrid[i][j];
+			sg[i][j].use = (logProb < 0);
+			if(sg[i][j].use) {
+				sg[i][j].parent = null;
+				sg[i][j].dist = omega;
+				sg[i][j].visited = false;
+				sg[i][j].priority = -omega;
+				sg[i][j].queued = false;
+			}
+		}
+	}
+}
+function iterateGraphSearch() {
+	var curr = sgQueue.shift();
+	curr.visited = true;
+	curr.queued = false;
+
+	mapCtx.fillStyle = "blue";
+	mapCtx.beginPath();
+
+	var xy = gridIdxToXY(curr[0], curr[1]);
+	mapCtx.moveTo(xy[0], xy[1]);
+	mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
+	mapCtx.closePath();
+	mapCtx.fill();
+
+
+	if(curr[0] == goalIdx[0] && curr[1] == goalIdx[1]) {
+		alert("Done!");
+		//TODO: figure this out
+		return;
+	}
+
+	var nbrs = graphGetNeighbors(curr);
+	for(var i=0; i<nbrs.length; ++i) {
+		if(sg[nbrs[i][0]][nbrs[i][1]].use) {
+			if(!sg[nbrs[i][0]][nbrs[i][1]].visited) {
+				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + cellWidth) {
+					sg[nbrs[i][0]][nbrs[i][1]].parent = curr;
+					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + cellWidth;
+					sg[nbrs[i][0]][nbrs[i][1]].priority = sg[nbrs[i][0]][nbrs[i][1]].dist + heuristic(nbrs[i]);
+					if(searchAlg == 0) {
+						sgQueue.push(nbrs[i]);
+					}
+				}
+			}
+		}
+	}
+
+	window.setTimeout(iterateGraphSearch, 0);
+}
+function graphGetNeighbors(idx) {
+	var nbrs = [];
+	if(idx[0] > 0) {
+		nbrs.push([idx[0]-1, idx[1]]);
+	}
+	if(idx[0] < occupancyGrid.length-1) {
+		nbrs.push([idx[0]+1, idx[1]]);
+	}
+	if(idx[1] > 0) {
+		nbrs.push([idx[0], idx[1]-1]);
+	}
+	if(idx[1] < occupancyGrid[idx[0]].length-1) {
+		nbrs.push([idx[0], idx[1]+1]);
+	}
+	return nbrs;
+}
+function heuristic(idx) {
+	//
+	return distance(gridIdxToXY(idx[0], idx[1]), goalPos);
 }
 
 /////////////////////
