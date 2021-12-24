@@ -103,6 +103,7 @@ var goalPos = [];
 var goalIdx = [];
 var sg = [];
 var sgQueue = []; //Can be a stack for DFS, a queue for BFS, or a priority-queue for A*
+var path = [];
 
 ///////////////
 /// CLASSES ///
@@ -533,6 +534,17 @@ function drawGoalPose(ctx) {
 
 	ctx.stroke();
 }
+function drawPathToGoal(ctx) {
+	ctx.strokeStyle = goalStrokeStyle;
+	ctx.beginPath();
+	var xy = gridIdxToXY(path[0][0], path[0][1]);
+	ctx.moveTo(xy[0], xy[1]);
+	for(var i=1; i<path.length; ++i) {
+		xy = gridIdxToXY(path[i][0], path[i][1]);
+		ctx.lineTo(xy[0], xy[1]);
+	}
+	ctx.stroke();
+}
 function drawFrame() {
 	clearCanvas(worldCtx);
 	clearCanvas(mapCtx);
@@ -552,6 +564,10 @@ function drawFrame() {
 
 	if(moved) {
 		drawParticles(mapCtx);
+	}
+
+	if(goalPos.length > 0) {
+		drawGoalPose(mapCtx);
 	}
 }
 
@@ -1328,14 +1344,13 @@ function iterateGraphSearch() {
 	else {
 		curr = sgQueue.shift();
 	}
-	console.log(curr.length);
 	sg[curr[0]][curr[1]].visited = true;
 	sg[curr[0]][curr[1]].queued = false;
 
 	if(curr[0] == goalIdx[0] && curr[1] == goalIdx[1]) {
-		alert("Done!");
 		pathPlanning = false;
-		//TODO: figure this out
+		computePathToGoal();
+		drawPathToGoal(mapCtx);
 		return;
 	}
 
@@ -1462,6 +1477,15 @@ function heapExtract(q) {
 	}
 
 	return output;
+}
+function computePathToGoal() {
+	path = [goalIdx];
+	while(path[path.length-1][0] != xyToGridIdx(robotPose.pos)[0]
+		|| path[path.length-1][1] != xyToGridIdx(robotPose.pos)[1]) {
+		var curr = path[path.length-1];
+		var next = sg[curr[0]][curr[1]].parent;
+		path.push(next);
+	}
 }
 
 /////////////////////
