@@ -10,6 +10,10 @@ var robotMarkerTriangleAngle = 30 * (Math.PI / 180); //The front angle of the tr
 var robotStrokeStyle = "black";
 var obstacleStrokeStyle = "black";
 var lidarStrokeStyle = "red";
+var realRobotPathStrokeStyle = "blue";
+var estRobotPathStrokeStyle = "green";
+var goalStrokeStyle = "brown";
+var goalMarkerSize = 0.075;
 var obstacleSizeRange = [0.5, 2.5];
 var numObstacles = 40;
 var robotSpeed = 1.0; // Robot speed, in meters per second
@@ -87,6 +91,8 @@ var mouseCoords;
 var draggingObstacle = false;
 var draggedObstacleOffset;
 var obstacleIdx;
+
+var goalPose = [];
 
 ///////////////
 /// CLASSES ///
@@ -338,6 +344,7 @@ function worldCanvasMouseDownHandler(e) {
 		var top = e.clientY - rect.top;
 		mouseCoords = leftTopToXY(left, top);
 
+		//Check if dragging an obstacle
 		for(var i=0; i<obstacles.length; ++i) {
 			var thisObstacleSegments = obstacles[i].segments();
 			var segment = [
@@ -345,7 +352,6 @@ function worldCanvasMouseDownHandler(e) {
 				obstacles[i].pos
 			];
 			var found = true;
-			console.log(thisObstacleSegments)
 			for(var j=0; j<thisObstacleSegments.length; ++j) {
 				if(lineLineIntersection(segment, thisObstacleSegments[j])) {
 					found = false;
@@ -359,9 +365,13 @@ function worldCanvasMouseDownHandler(e) {
 					obstacles[i].pos[0] - mouseCoords[0],
 					obstacles[i].pos[1] - mouseCoords[1]
 				];
-				break;
+				return;
 			}
 		}
+
+		//Set goal point
+		goalPose = mouseCoords.slice();
+		drawFrame();
 	}
 }
 function worldCanvasMouseMoveHandler(e) {
@@ -474,6 +484,17 @@ function drawRobotPath(ctx, path, color) {
 	}
 	ctx.stroke();
 }
+function drawGoalPose(ctx) {
+	ctx.strokeStyle = goalStrokeStyle;
+	ctx.beginPath();
+
+	ctx.moveTo(goalPose[0] - goalMarkerSize, goalPose[1] - goalMarkerSize);
+	ctx.lineTo(goalPose[0] + goalMarkerSize, goalPose[1] + goalMarkerSize);
+	ctx.moveTo(goalPose[0] - goalMarkerSize, goalPose[1] + goalMarkerSize);
+	ctx.lineTo(goalPose[0] + goalMarkerSize, goalPose[1] - goalMarkerSize);
+
+	ctx.stroke();
+}
 function drawFrame() {
 	clearCanvas(worldCtx);
 	clearCanvas(mapCtx);
@@ -483,16 +504,21 @@ function drawFrame() {
 		obstacles[i].draw(worldCtx);
 	}
 	//Draw the robot onto the world
-	drawRobotPath(worldCtx, robotPath, "blue");
+	drawRobotPath(worldCtx, robotPath, realRobotPathStrokeStyle);
 	drawLidar(worldCtx);
 	drawRobot(worldCtx, robotPose);
 	drawGrid(mapCtx);
-	drawRobotPath(mapCtx, robotPath, "blue");
-	drawRobotPath(mapCtx, robotEstPath, "green");
+	drawRobotPath(mapCtx, robotPath, realRobotPathStrokeStyle);
+	drawRobotPath(mapCtx, robotEstPath, estRobotPathStrokeStyle);
 	drawRobot(mapCtx, estRobotPose);
 
 	if(moved) {
-		drawParticles();
+		drawParticles(mapCtx);
+	}
+
+	if(goalPose.length > 0) {
+		drawGoalPose(worldCtx);
+		drawGoalPose(mapCtx);
 	}
 }
 
@@ -919,9 +945,9 @@ function updateOccupancyGrid(pose) {
 	}
 }
 
-function drawParticles() {
+function drawParticles(ctx) {
 	for(var i=0; i<particles.length; ++i) {
-		particles[i].draw(mapCtx, maxWeight)
+		particles[i].draw(ctx, maxWeight);
 	}
 }
 function resetParticleFilter() {
