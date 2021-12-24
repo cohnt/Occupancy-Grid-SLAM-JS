@@ -833,6 +833,13 @@ function distance(p1, p2) {
 	}
 	return Math.sqrt(total);
 }
+function l1distance(p1, p2) {
+	var total = 0;
+	for(var i=0; i<p1.length; ++i) {
+		total += Math.abs(p1[i]-p2[i]);
+	}
+	return total;
+}
 function lineCircleCollisionTest(line, circleCenter, radius) {
 	// https://stackoverflow.com/a/37225895/
 	var v1, v2, v3, u;
@@ -1435,7 +1442,7 @@ function graphGetNeighbors(idx) {
 }
 function heuristic(idx) {
 	//
-	return distance(idx, goalIdx);
+	return l1distance(idx, goalIdx);
 }
 function heapInsert(q, idx) {
 	q.push(idx);
