@@ -1293,9 +1293,33 @@ function createSearchGraph() {
 		sg.push([]);
 		for(var j=0; j<occupancyGrid[i].length; ++j) {
 			sg[i].push({});
-			var logProb = occupancyGrid[i][j];
-			sg[i][j].use = (logProb < 0);
+			sg[i][j].use = true;
+			var nbrhd = [];
+			var radius = Math.ceil(robotRadius / cellWidth);
+			for(var di=-radius; di<radius; ++di) {
+				if(!sg[i][j].use) {
+					break;
+				}
+				for(var dj=-radius; dj<radius; ++dj) {
+					if(
+						(i+di) > 0
+						&&
+						(i+di) < occupancyGrid.length-1
+						&&
+						(j+dj) > 0
+						&&
+						(j+dj) < occupancyGrid[i+di].length-1
+					) {
+						var logProb = occupancyGrid[i+di][j+dj];
+						if(logProb >= 0) {
+							sg[i][j].use = false;
+							break;
+						}
+					}
+				}
+			}
 			if(sg[i][j].use) {
+				sg[i][j].use = true
 				sg[i][j].parent = null;
 				sg[i][j].dist = omega;
 				sg[i][j].visited = false;
