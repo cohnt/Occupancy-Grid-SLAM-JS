@@ -13,6 +13,8 @@ var lidarStrokeStyle = "red";
 var realRobotPathStrokeStyle = "blue";
 var estRobotPathStrokeStyle = "green";
 var goalStrokeStyle = "brown";
+var searchStrokeStyle = "blue";
+var searchFronteirStrokeStyle = "skyblue";
 var goalMarkerSize = 0.075;
 var obstacleSizeRange = [0.5, 2.5];
 var numObstacles = 40;
@@ -524,6 +526,29 @@ function drawGoalPose(ctx) {
 
 	ctx.stroke();
 }
+function drawSearchGraph(ctx) {
+	for(var i=0; i<sg.length; ++i) {
+		for(var j=0; j<sg[i].length; ++j) {
+			if(sg[i][j].use) {
+				if(sg[i][j].visited) {
+					ctx.fillStyle = searchStrokeStyle;
+				}
+				else if(sg[i][j].queued) {
+					ctx.fillStyle = searchFronteirStrokeStyle;
+				}
+				else {
+					continue;
+				}
+				var xy = gridIdxToXY(i, j);
+				ctx.beginPath();
+				ctx.moveTo(xy[0], xy[1]);
+				ctx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
+				ctx.closePath();
+				ctx.fill();
+			}
+		}
+	}
+}
 function drawFrame() {
 	clearCanvas(worldCtx);
 	clearCanvas(mapCtx);
@@ -548,6 +573,7 @@ function drawFrame() {
 	if(goalPos.length > 0) {
 		drawGoalPose(worldCtx);
 		drawGoalPose(mapCtx);
+		drawSearchGraph(mapCtx);
 	}
 }
 
@@ -1280,20 +1306,24 @@ function createSearchGraph() {
 	}
 }
 function iterateGraphSearch() {
-	var curr = sgQueue.shift();
+	var curr;
+	if(searchAlg == 2) {
+		curr = heapExtract(sgQueue);
+	}
+	else {
+		curr = sgQueue.shift();
+	}
 	console.log(curr.length);
-	curr.visited = true;
-	curr.queued = false;
+	sg[curr[0]][curr[1]].visited = true;
+	sg[curr[0]][curr[1]].queued = false;
 
-	mapCtx.fillStyle = "blue";
-	mapCtx.beginPath();
-
-	var xy = gridIdxToXY(curr[0], curr[1]);
-	mapCtx.moveTo(xy[0], xy[1]);
-	mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
-	mapCtx.closePath();
-	mapCtx.fill();
-
+	// mapCtx.fillStyle = "blue";
+	// mapCtx.beginPath();
+	// var xy = gridIdxToXY(curr[0], curr[1]);
+	// mapCtx.moveTo(xy[0], xy[1]);
+	// mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
+	// mapCtx.closePath();
+	// mapCtx.fill();
 
 	if(curr[0] == goalIdx[0] && curr[1] == goalIdx[1]) {
 		alert("Done!");
@@ -1316,12 +1346,16 @@ function iterateGraphSearch() {
 						sgQueue.unshift(nbrs[i]);
 					}
 					if(searchAlg == 2) {
-						heapInsert(sgQueue, nbrs[i], sg[nbrs[i][0]][nbrs[i][1]].priority);
+						heapInsert(sgQueue, nbrs[i]);
 					}
 					sg[nbrs[i][0]][nbrs[i][1]].queued = true;
 				}
 			}
 		}
+	}
+
+	if(!running) {
+		drawFrame();
 	}
 
 	window.setTimeout(iterateGraphSearch, 0);
@@ -1346,7 +1380,7 @@ function heuristic(idx) {
 	//
 	return distance(gridIdxToXY(idx[0], idx[1]), goalPos);
 }
-function heapInsert(q, idx, priority) {
+function heapInsert(q, idx) {
 	q.push(idx);
 
 	var workingIdx = q.length - 1;
@@ -1366,6 +1400,48 @@ function heapInsert(q, idx, priority) {
 		q[workingIdx] = temp.slice();
 		workingIdx = parentIdx;
 	}
+}
+function heapExtract(q) {
+	var output = q[0].slice();
+
+	//Swap first and last element
+	var start = 0;
+	var end = q.length - 1;
+	var temp = q[start];
+	q[start] = q[end];
+	q[end] = temp;
+	q.pop();
+
+	var workingIdx = 0;
+	var leftIdx = null;
+	var rightIdx = null;
+	var smallestIdx = null;
+	temp = null;
+
+	while(true) {
+		leftIdx = (2 * workingIdx) + 1;
+		rightIdx = (2 * workingIdx) + 2;
+		smallestIdx = workingIdx;
+
+		if(leftIdx < q.length && sg[q[leftIdx][0]][q[leftIdx][1]].priority < sg[q[smallestIdx][0]][q[smallestIdx][1]].priority) {
+			smallestIdx = leftIdx;
+		}
+		if(rightIdx < q.length && sg[q[rightIdx][0]][q[rightIdx][1]].priority < sg[q[smallestIdx][0]][q[smallestIdx][1]].priority) {
+			smallestIdx = rightIdx;
+		}
+
+		if(smallestIdx != workingIdx) {
+			temp = q[smallestIdx];
+			q[smallestIdx] = q[workingIdx];
+			q[workingIdx] = temp;
+			workingIdx = smallestIdx;
+		}
+		else {
+			break;
+		}
+	}
+
+	return output;
 }
 
 /////////////////////
