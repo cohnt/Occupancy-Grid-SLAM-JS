@@ -363,7 +363,9 @@ function worldCanvasMouseMoveHandler(e) {
 		obstacles[obstacleIdx].pos[1] = mouseCoords[1] + draggedObstacleOffset[1];
 
 		updateObstacleSegments();
-		drawFrame();
+		if(!running) {
+			drawFrame();
+		}
 	}
 }
 function worldCanvasMouseUpHandler(e) {
