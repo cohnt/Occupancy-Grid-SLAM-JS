@@ -1357,20 +1357,26 @@ function iterateGraphSearch() {
 						heapInsert(sgQueue, nbrs[i]);
 					}
 					sg[nbrs[i][0]][nbrs[i][1]].queued = true;
+
+					mapCtx.fillStyle = searchFronteirStrokeStyle;
+					mapCtx.beginPath();
+					var xy = gridIdxToXY(nbrs[i][0], nbrs[i][1]);
+					mapCtx.moveTo(xy[0], xy[1]);
+					mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
+					mapCtx.closePath();
+					mapCtx.fill();
 				}
 			}
 		}
 	}
 
-	if(!running) {
-		mapCtx.fillStyle = "blue";
-		mapCtx.beginPath();
-		var xy = gridIdxToXY(curr[0], curr[1]);
-		mapCtx.moveTo(xy[0], xy[1]);
-		mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
-		mapCtx.closePath();
-		mapCtx.fill();
-	}
+	mapCtx.fillStyle = searchStrokeStyle;
+	mapCtx.beginPath();
+	var xy = gridIdxToXY(curr[0], curr[1]);
+	mapCtx.moveTo(xy[0], xy[1]);
+	mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
+	mapCtx.closePath();
+	mapCtx.fill();
 
 	window.setTimeout(iterateGraphSearch, 0);
 }
