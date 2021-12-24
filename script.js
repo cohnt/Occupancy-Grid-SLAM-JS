@@ -332,7 +332,7 @@ function keyupHandler(e) {
 	keyStates[keyId] = false;
 }
 function worldCanvasMouseDownHandler(e) {
-	if(e.which == 1 && hasStarted) { //Left mouse button
+	if(e.which == 1) { //Left mouse button
 		var rect = e.target.getBoundingClientRect();
 		var left = e.clientX - rect.left;
 		var top = e.clientY - rect.top;
@@ -363,6 +363,7 @@ function worldCanvasMouseMoveHandler(e) {
 		obstacles[obstacleIdx].pos[1] = mouseCoords[1] + draggedObstacleOffset[1];
 
 		updateObstacleSegments();
+		drawFrame();
 	}
 }
 function worldCanvasMouseUpHandler(e) {
