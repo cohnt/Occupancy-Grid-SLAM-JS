@@ -69,6 +69,7 @@ var stop = false; //Used for the control of the tick loop.
 var moved = false; //Used for the control of the tick loop.
 var pathPlanning = false; //Used for the control of the tick loop.
 var stopPathPlanning = false; //Used for the control of the tick loop.
+var followingPath = false; //Used for the control of the tick loop.
 
 var pixelsPerMeter; //Pixels per meter
 var worldWidth; //World width in meters
@@ -104,6 +105,7 @@ var goalIdx = [];
 var sg = [];
 var sgQueue = []; //Can be a stack for DFS, a queue for BFS, or a priority-queue for A*
 var path = [];
+var currentPathIdx = [];
 
 ///////////////
 /// CLASSES ///
@@ -606,8 +608,17 @@ function tick() {
 	var dt = getTimeMS() - lastFrameTime;
 	lastFrameTime += dt;
 	var lastRobotPose = JSON.parse(JSON.stringify(robotPose));
-
-	updateRobotPos(dt);
+	if(followingPath) {
+		robotPose.pos = gridIdxToXY(path[currentPathIdx][0], path[currentPathIdx][1]);
+		--currentPathIdx;
+		if(currentPathIdx == 0) {
+			followingPath = false;
+		}
+		moved = true;
+	}
+	else {
+		updateRobotPos(dt);
+	}
 	lidarDistances = computeLidarDists(robotPose);
 	lidarEnds = [];
 	noisifyLidar();
@@ -1331,9 +1342,7 @@ function iterateGraphSearch() {
 	}
 
 	if(sgQueue.length == 0) {
-		alert("Failed!");
 		pathPlanning = false;
-		//TODO: figure this out
 		return;
 	}
 
@@ -1349,8 +1358,15 @@ function iterateGraphSearch() {
 
 	if(curr[0] == goalIdx[0] && curr[1] == goalIdx[1]) {
 		pathPlanning = false;
+		running = true;
+
 		computePathToGoal();
 		drawPathToGoal(mapCtx);
+		currentPathIdx = path.length-1;
+		followingPath = true;
+
+		requestAnimationFrame(tick);
+
 		return;
 	}
 
