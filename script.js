@@ -422,14 +422,15 @@ function mapCanvasMouseDownHandler(e) {
 		var top = e.clientY - rect.top;
 		var mapMouseCoords = leftTopToXY(left, top);
 
-		if(hasStarted) {
+		if(hasStarted && !pathPlanning) {
 			var goalGrid = xyToGridIdx(mapMouseCoords);
 			if(occupancyGrid[goalGrid[0]][goalGrid[1]] < 0) {
 				goalPos = mapMouseCoords.slice();
 				goalIdx = xyToGridIdx(goalPos);
 				createSearchGraph();
-				var idx = xyToGridIdx(robotPose.pos)
-				sgQueue = [idx];
+				var idx = xyToGridIdx(robotPose.pos);
+				sgQueue = [];
+				heapInsert(sgQueue, idx, heuristic(idx));
 				sg[idx[0]][idx[1]].queued = true;
 				sg[idx[0]][idx[1]].distance = 0;
 				sg[idx[0]][idx[1]].priority = heuristic(idx);
@@ -619,6 +620,8 @@ function tick() {
 		--currentPathIdx;
 		if(currentPathIdx == 0) {
 			followingPath = false;
+			path = [];
+			currentPathIdx = null;
 		}
 		moved = true;
 	}
@@ -1383,6 +1386,8 @@ function iterateGraphSearch() {
 		return;
 	}
 
+	var currPriority = curr.priority;
+
 	var nbrs = graphGetNeighbors(curr);
 	for(var i=0; i<nbrs.length; ++i) {
 		if(sg[nbrs[i][0]][nbrs[i][1]].use) {
@@ -1390,7 +1395,7 @@ function iterateGraphSearch() {
 				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + 1) {
 					sg[nbrs[i][0]][nbrs[i][1]].parent = curr;
 					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + 1;
-					sg[nbrs[i][0]][nbrs[i][1]].priority = sg[nbrs[i][0]][nbrs[i][1]].dist + heuristic(nbrs[i]);
+					sg[nbrs[i][0]][nbrs[i][1]].priority = currPriority + heuristic(nbrs[i]);
 					if(searchAlg == 0 && !sg[nbrs[i][0]][nbrs[i][1]].queued) {
 						sgQueue.push(nbrs[i]);
 					}
@@ -1398,7 +1403,7 @@ function iterateGraphSearch() {
 						sgQueue.unshift(nbrs[i]);
 					}
 					if(searchAlg == 2) {
-						heapInsert(sgQueue, nbrs[i]);
+						heapInsert(sgQueue, nbrs[i], sg[nbrs[i][0]][nbrs[i][1]].priority);
 					}
 					sg[nbrs[i][0]][nbrs[i][1]].queued = true;
 
@@ -1444,7 +1449,8 @@ function heuristic(idx) {
 	//
 	return l1distance(idx, goalIdx);
 }
-function heapInsert(q, idx) {
+function heapInsert(q, idx, priority) {
+	idx.priority = priority;
 	q.push(idx);
 
 	var workingIdx = q.length - 1;
@@ -1455,18 +1461,19 @@ function heapInsert(q, idx) {
 			break;
 		}
 		parentIdx = Math.floor((workingIdx - 1) / 2);
-		if(sg[q[parentIdx][0]][q[parentIdx][1]].priority <= sg[q[workingIdx][0]][q[workingIdx][1]].priority) {
+		if(q[parentIdx].priority <= q[workingIdx].priority) {
 			break;
 		}
 
-		temp = q[parentIdx].slice();
-		q[parentIdx] = q[workingIdx].slice();
-		q[workingIdx] = temp.slice();
+		temp = q[parentIdx];
+		q[parentIdx] = q[workingIdx];
+		q[workingIdx] = temp;
 		workingIdx = parentIdx;
 	}
 }
 function heapExtract(q) {
-	var output = q[0].slice();
+	var output = q[0];
+	console.log(output.priority);
 
 	//Swap first and last element
 	var start = 0;
@@ -1487,10 +1494,10 @@ function heapExtract(q) {
 		rightIdx = (2 * workingIdx) + 2;
 		smallestIdx = workingIdx;
 
-		if(leftIdx < q.length && sg[q[leftIdx][0]][q[leftIdx][1]].priority < sg[q[smallestIdx][0]][q[smallestIdx][1]].priority) {
+		if(leftIdx < q.length && q[leftIdx].priority < q[smallestIdx].priority) {
 			smallestIdx = leftIdx;
 		}
-		if(rightIdx < q.length && sg[q[rightIdx][0]][q[rightIdx][1]].priority < sg[q[smallestIdx][0]][q[smallestIdx][1]].priority) {
+		if(rightIdx < q.length && q[rightIdx].priority < q[smallestIdx].priority) {
 			smallestIdx = rightIdx;
 		}
 
