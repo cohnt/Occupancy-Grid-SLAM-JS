@@ -1310,10 +1310,12 @@ function createSearchGraph() {
 						&&
 						(j+dj) < occupancyGrid[i+di].length-1
 					) {
-						var logProb = occupancyGrid[i+di][j+dj];
-						if(logProb >= 0) {
-							sg[i][j].use = false;
-							break;
+						if(distance([i,j], [i+di,j+dj])*cellWidth <= robotRadius) {
+							var logProb = occupancyGrid[i+di][j+dj];
+							if(logProb >= 0) {
+								sg[i][j].use = false;
+								break;
+							}
 						}
 					}
 				}
@@ -1359,9 +1361,9 @@ function iterateGraphSearch() {
 	for(var i=0; i<nbrs.length; ++i) {
 		if(sg[nbrs[i][0]][nbrs[i][1]].use) {
 			if(!sg[nbrs[i][0]][nbrs[i][1]].visited) {
-				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + cellWidth) {
+				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + 1) {
 					sg[nbrs[i][0]][nbrs[i][1]].parent = curr;
-					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + cellWidth;
+					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + 1;
 					sg[nbrs[i][0]][nbrs[i][1]].priority = sg[nbrs[i][0]][nbrs[i][1]].dist + heuristic(nbrs[i]);
 					if(searchAlg == 0 && !sg[nbrs[i][0]][nbrs[i][1]].queued) {
 						sgQueue.push(nbrs[i]);
