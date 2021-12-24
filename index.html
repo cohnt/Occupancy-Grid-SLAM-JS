@@ -26,6 +26,8 @@
 	<br>
 	Once you've started, use WASD to control the robot. You can also click and drag obstacles. The blue path is the robot's actual path, and the green path is the estimated path.
 	<br>
+	If you click anywhere on the map, the robot will plan a path to that location, and then follow it.
+	<br>
 	As long as the simulation isn't running, you can modify parameters and settings below.
 </p>
 
@@ -325,6 +327,17 @@
 				<td>The method used to estimate the robot pose from the particle filter. 1 for the weighted average of the particles, 2 for the unweighted average of the particles, and 3 for the maximum likelihood particle.</td>
 			</tr>
 
+			<tr><td>&nbsp;</td></tr>
+			<tr><th>Path Planning Properties</th></tr>
+			<tr>
+				<td>Path Planning Algorithm</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
+					if(elt.value == 0 || elt.value == 1 || elt.value == 2) {
+						searchAlg = Number(elt.value);
+					}
+				})(this)">2</textarea></td>
+				<td>The path planning algorithm. 0 for breadth-first search, 1 for depth-first search, and 2 for A*.</td>
+			</tr>
 			<!-- <tr>
 				<td>Parameter</td>
 				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
