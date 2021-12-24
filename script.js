@@ -67,6 +67,8 @@ var hasStarted = false; //Used for the control of the tick loop.
 var running = false; //Used for the control of the tick loop.
 var stop = false; //Used for the control of the tick loop.
 var moved = false; //Used for the control of the tick loop.
+var pathPlanning = false; //Used for the control of the tick loop.
+var stopPathPlanning = false; //Used for the control of the tick loop.
 
 var pixelsPerMeter; //Pixels per meter
 var worldWidth; //World width in meters
@@ -292,7 +294,7 @@ function setup() {
 
 function startButtonClick() {
 	//This is the callback function if you click the start button.
-	if(!running && !hasStarted) {
+	if(!running && !pathPlanning && !hasStarted) {
 		//If we aren't already running, and we haven't started yet, start for the first time.
 		reset();
 		readonly(true); //Prevent the user from changing the parameters while it's running.
@@ -301,7 +303,7 @@ function startButtonClick() {
 		lastFrameTime = null;
 		tick(); //This is the actual loop function. You only need to call it once -- it will keep calling itself as appropriate.
 	}
-	else if(!running && hasStarted) {
+	else if(!running && !pathPlanning && hasStarted) {
 		//If we aren't running, but we have started yet, resume where we left off.
 		running = true;
 		lastFrameTime = null;
@@ -324,6 +326,9 @@ function resetButtonClick() {
 		readonly(false);
 		hasStarted = false;
 		moved = false;
+		if(pathPlanning) {
+			stopPathPlanning = true;
+		}
 		reset(); //Get everything back to its initial state.
 	}
 }
@@ -425,6 +430,7 @@ function mapCanvasMouseDownHandler(e) {
 				sg[idx[0]][idx[1]].queued = true;
 				sg[idx[0]][idx[1]].distance = 0;
 				sg[idx[0]][idx[1]].priority = heuristic(idx);
+				pathPlanning = true;
 				pauseButtonClick();
 				drawFrame();
 				requestAnimationFrame(iterateGraphSearch);
@@ -527,29 +533,6 @@ function drawGoalPose(ctx) {
 
 	ctx.stroke();
 }
-function drawSearchGraph(ctx) {
-	for(var i=0; i<sg.length; ++i) {
-		for(var j=0; j<sg[i].length; ++j) {
-			if(sg[i][j].use) {
-				if(sg[i][j].visited) {
-					ctx.fillStyle = searchStrokeStyle;
-				}
-				else if(sg[i][j].queued) {
-					ctx.fillStyle = searchFronteirStrokeStyle;
-				}
-				else {
-					continue;
-				}
-				var xy = gridIdxToXY(i, j);
-				ctx.beginPath();
-				ctx.moveTo(xy[0], xy[1]);
-				ctx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
-				ctx.closePath();
-				ctx.fill();
-			}
-		}
-	}
-}
 function drawFrame() {
 	clearCanvas(worldCtx);
 	clearCanvas(mapCtx);
@@ -569,12 +552,6 @@ function drawFrame() {
 
 	if(moved) {
 		drawParticles(mapCtx);
-	}
-
-	if(goalPos.length > 0) {
-		drawGoalPose(worldCtx);
-		drawGoalPose(mapCtx);
-		drawSearchGraph(mapCtx);
 	}
 }
 
@@ -1333,8 +1310,15 @@ function createSearchGraph() {
 	}
 }
 function iterateGraphSearch() {
+	if(stopPathPlanning) {
+		return;
+	}
+
 	if(sgQueue.length == 0) {
 		alert("Failed!");
+		pathPlanning = false;
+		//TODO: figure this out
+		return;
 	}
 
 	var curr;
@@ -1350,6 +1334,7 @@ function iterateGraphSearch() {
 
 	if(curr[0] == goalIdx[0] && curr[1] == goalIdx[1]) {
 		alert("Done!");
+		pathPlanning = false;
 		//TODO: figure this out
 		return;
 	}
