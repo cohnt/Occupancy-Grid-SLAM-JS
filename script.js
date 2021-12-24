@@ -48,7 +48,7 @@ var particleDispHeadingLength = 0.05; //Length of the direction marker for each 
 var errorWeightColorDivisor = 300; //Used when selecting the color to correspond with each particle.
 var weightColorMultiplier = 0.9; //Used when selecting the color to correspond with each particle.
 
-var searchAlg = 0; //0 is BFS, 1 is DFS, 2 is A*
+var searchAlg = 2; //0 is BFS, 1 is DFS, 2 is A*
 
 ////////////////////////
 /// GLOBAL VARIABLES ///
@@ -1281,6 +1281,7 @@ function createSearchGraph() {
 }
 function iterateGraphSearch() {
 	var curr = sgQueue.shift();
+	console.log(curr.length);
 	curr.visited = true;
 	curr.queued = false;
 
@@ -1308,9 +1309,16 @@ function iterateGraphSearch() {
 					sg[nbrs[i][0]][nbrs[i][1]].parent = curr;
 					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + cellWidth;
 					sg[nbrs[i][0]][nbrs[i][1]].priority = sg[nbrs[i][0]][nbrs[i][1]].dist + heuristic(nbrs[i]);
-					if(searchAlg == 0) {
+					if(searchAlg == 0 && !sg[nbrs[i][0]][nbrs[i][1]].queued) {
 						sgQueue.push(nbrs[i]);
 					}
+					if(searchAlg == 1 && !sg[nbrs[i][0]][nbrs[i][1]].queued) {
+						sgQueue.unshift(nbrs[i]);
+					}
+					if(searchAlg == 2) {
+						heapInsert(sgQueue, nbrs[i], sg[nbrs[i][0]][nbrs[i][1]].priority);
+					}
+					sg[nbrs[i][0]][nbrs[i][1]].queued = true;
 				}
 			}
 		}
@@ -1337,6 +1345,27 @@ function graphGetNeighbors(idx) {
 function heuristic(idx) {
 	//
 	return distance(gridIdxToXY(idx[0], idx[1]), goalPos);
+}
+function heapInsert(q, idx, priority) {
+	q.push(idx);
+
+	var workingIdx = q.length - 1;
+	var parentIdx = null;
+	var temp = null;
+	while(true) {
+		if(workingIdx == 0) {
+			break;
+		}
+		parentIdx = Math.floor((workingIdx - 1) / 2);
+		if(sg[q[parentIdx][0]][q[parentIdx][1]].priority <= sg[q[workingIdx][0]][q[workingIdx][1]].priority) {
+			break;
+		}
+
+		temp = q[parentIdx].slice();
+		q[parentIdx] = q[workingIdx].slice();
+		q[workingIdx] = temp.slice();
+		workingIdx = parentIdx;
+	}
 }
 
 /////////////////////
