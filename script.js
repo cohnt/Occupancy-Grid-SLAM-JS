@@ -1296,11 +1296,11 @@ function createSearchGraph() {
 			sg[i][j].use = true;
 			var nbrhd = [];
 			var radius = Math.ceil(robotRadius / cellWidth);
-			for(var di=-radius; di<radius; ++di) {
+			for(var di=-radius; di<=radius; ++di) {
 				if(!sg[i][j].use) {
 					break;
 				}
-				for(var dj=-radius; dj<radius; ++dj) {
+				for(var dj=-radius; dj<=radius; ++dj) {
 					if(
 						(i+di) > 0
 						&&
@@ -1310,7 +1310,7 @@ function createSearchGraph() {
 						&&
 						(j+dj) < occupancyGrid[i+di].length-1
 					) {
-						if(distance([i,j], [i+di,j+dj])*cellWidth <= robotRadius) {
+						if(distance([i,j], [i+di,j+dj])*cellWidth < robotRadius) {
 							var logProb = occupancyGrid[i+di][j+dj];
 							if(logProb >= 0) {
 								sg[i][j].use = false;
@@ -1343,14 +1343,6 @@ function iterateGraphSearch() {
 	sg[curr[0]][curr[1]].visited = true;
 	sg[curr[0]][curr[1]].queued = false;
 
-	// mapCtx.fillStyle = "blue";
-	// mapCtx.beginPath();
-	// var xy = gridIdxToXY(curr[0], curr[1]);
-	// mapCtx.moveTo(xy[0], xy[1]);
-	// mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
-	// mapCtx.closePath();
-	// mapCtx.fill();
-
 	if(curr[0] == goalIdx[0] && curr[1] == goalIdx[1]) {
 		alert("Done!");
 		//TODO: figure this out
@@ -1381,7 +1373,13 @@ function iterateGraphSearch() {
 	}
 
 	if(!running) {
-		drawFrame();
+		mapCtx.fillStyle = "blue";
+		mapCtx.beginPath();
+		var xy = gridIdxToXY(curr[0], curr[1]);
+		mapCtx.moveTo(xy[0], xy[1]);
+		mapCtx.arc(xy[0], xy[1], particleDispRadius, 0, 2*Math.PI, true);
+		mapCtx.closePath();
+		mapCtx.fill();
 	}
 
 	window.setTimeout(iterateGraphSearch, 0);
