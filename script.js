@@ -105,7 +105,7 @@ var goalIdx = [];
 var sg = [];
 var sgQueue = []; //Can be a stack for DFS, a queue for BFS, or a priority-queue for A*
 var path = [];
-var currentPathIdx = [];
+var currentPathIdx;
 
 ///////////////
 /// CLASSES ///
@@ -590,6 +590,12 @@ function reset() {
 	goalIdx = [];
 	sg = [];
 	sgQueue = []; //Can be a stack for DFS, a queue for BFS, or a priority-queue for A*
+	path = [];
+	currentPathIdx = null;
+
+	pathPlanning = false;
+	stopPathPlanning = false;
+	followingPath = false;
 
 	drawFrame();
 }
