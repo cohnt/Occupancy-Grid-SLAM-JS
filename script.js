@@ -425,6 +425,7 @@ function mapCanvasMouseDownHandler(e) {
 				sg[idx[0]][idx[1]].queued = true;
 				sg[idx[0]][idx[1]].distance = 0;
 				sg[idx[0]][idx[1]].priority = heuristic(idx);
+				pauseButtonClick();
 				drawFrame();
 				requestAnimationFrame(iterateGraphSearch);
 			}
@@ -1332,6 +1333,10 @@ function createSearchGraph() {
 	}
 }
 function iterateGraphSearch() {
+	if(sgQueue.length == 0) {
+		alert("Failed!");
+	}
+
 	var curr;
 	if(searchAlg == 2) {
 		curr = heapExtract(sgQueue);
