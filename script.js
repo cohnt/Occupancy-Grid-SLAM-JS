@@ -1304,7 +1304,7 @@ function createSearchGraph() {
 						&&
 						(j+dj) < occupancyGrid[i+di].length-1
 					) {
-						if(distance([i,j], [i+di,j+dj])*cellWidth < robotRadius) {
+						if(distance([i,j], [i+di,j+dj])*cellWidth < 2*robotRadius) {
 							var logProb = occupancyGrid[i+di][j+dj];
 							if(logProb >= 0) {
 								sg[i][j].use = false;
