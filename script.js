@@ -241,7 +241,10 @@ function setup() {
 	});
 	worldCanvas.addEventListener("mouseleave", function(e) {
 		worldCanvasMouseLeaveHandler(e);
-	})
+	});
+	mapCanvas.addEventListener("mousedown", function(e) {
+		mapCanvasMouseDownHandler(e);
+	});
 
 	//This gathers all of the <textarea> elements used to specify experimental parameters.
 	//Class name is not unique, so document.getElementsByClassName returns a list-like object.
@@ -365,13 +368,9 @@ function worldCanvasMouseDownHandler(e) {
 					obstacles[i].pos[0] - mouseCoords[0],
 					obstacles[i].pos[1] - mouseCoords[1]
 				];
-				return;
+				break;
 			}
 		}
-
-		//Set goal point
-		goalPose = mouseCoords.slice();
-		drawFrame();
 	}
 }
 function worldCanvasMouseMoveHandler(e) {
@@ -398,6 +397,22 @@ function worldCanvasMouseUpHandler(e) {
 function worldCanvasMouseLeaveHandler(e) {
 	if(draggingObstacle) {
 		draggingObstacle = false;
+	}
+}
+function mapCanvasMouseDownHandler(e) {
+	if(e.which == 1) { //Left mouse button
+		var rect = e.target.getBoundingClientRect();
+		var left = e.clientX - rect.left;
+		var top = e.clientY - rect.top;
+		var mapMouseCoords = leftTopToXY(left, top);
+
+		if(hasStarted) {
+			var goalGrid = xyToGridIdx(mapMouseCoords);
+			if(occupancyGrid[goalGrid[0]][goalGrid[1]] < 0) {
+				goalPose = mapMouseCoords.slice();
+				drawFrame();
+			}
+		}
 	}
 }
 function readonly(doMakeReadonly) {
@@ -843,7 +858,7 @@ function constructGrid() {
 	for(var i=0; i<gridHeight; ++i) {
 		occupancyGrid.push([]);
 		for(var j=0; j<gridWidth; ++j) {
-			occupancyGrid[i].push(0.5);
+			occupancyGrid[i].push(0);
 		}
 	}
 }
