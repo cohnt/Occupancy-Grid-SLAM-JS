@@ -1378,7 +1378,7 @@ function graphGetNeighbors(idx) {
 }
 function heuristic(idx) {
 	//
-	return distance(gridIdxToXY(idx[0], idx[1]), goalPos);
+	return distance(idx, goalIdx);
 }
 function heapInsert(q, idx) {
 	q.push(idx);
