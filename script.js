@@ -1395,7 +1395,7 @@ function iterateGraphSearch() {
 				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + 1) {
 					sg[nbrs[i][0]][nbrs[i][1]].parent = curr;
 					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + 1;
-					sg[nbrs[i][0]][nbrs[i][1]].priority = currPriority + heuristic(nbrs[i]);
+					sg[nbrs[i][0]][nbrs[i][1]].priority = sg[curr[0]][curr[1]].dist + heuristic(nbrs[i]);
 					if(searchAlg == 0 && !sg[nbrs[i][0]][nbrs[i][1]].queued) {
 						sgQueue.push(nbrs[i]);
 					}
@@ -1447,7 +1447,7 @@ function graphGetNeighbors(idx) {
 }
 function heuristic(idx) {
 	//
-	return l1distance(idx, goalIdx);
+	return distance(idx, goalIdx);
 }
 function heapInsert(q, idx, priority) {
 	idx.priority = priority;
