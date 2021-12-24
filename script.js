@@ -339,14 +339,26 @@ function worldCanvasMouseDownHandler(e) {
 		mouseCoords = leftTopToXY(left, top);
 
 		for(var i=0; i<obstacles.length; ++i) {
-			if(distance(mouseCoords, obstacles[i].pos) < obstacles[i].width/2) {
+			var thisObstacleSegments = obstacles[i].segments();
+			var segment = [
+				mouseCoords,
+				obstacles[i].pos
+			];
+			var found = true;
+			console.log(thisObstacleSegments)
+			for(var j=0; j<thisObstacleSegments.length; ++j) {
+				if(lineLineIntersection(segment, thisObstacleSegments[j])) {
+					found = false;
+					break;
+				}
+			}
+			if(found) {
 				draggingObstacle = true;
 				obstacleIdx = i;
 				draggedObstacleOffset = [
 					obstacles[i].pos[0] - mouseCoords[0],
 					obstacles[i].pos[1] - mouseCoords[1]
 				];
-				console.log("Starting to drag")
 				break;
 			}
 		}
