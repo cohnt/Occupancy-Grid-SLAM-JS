@@ -2,7 +2,7 @@
 /// CONSTANTS ///
 /////////////////
 
-var canvasSize = [0.49, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
+var canvasSize = [0.45, 0.7]; //Size of each canvas, as a fraction of the total page width and height, respectively
 var worldScale = 40; //The width of the entire browser viewport (in meters), determining the scale of the displays
 var canvasLineWidth = 0.015;
 var robotRadius = 0.2;
