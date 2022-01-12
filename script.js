@@ -1392,9 +1392,9 @@ function iterateGraphSearch() {
 	for(var i=0; i<nbrs.length; ++i) {
 		if(sg[nbrs[i][0]][nbrs[i][1]].use) {
 			if(!sg[nbrs[i][0]][nbrs[i][1]].visited) {
-				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + 1) {
+				if(sg[nbrs[i][0]][nbrs[i][1]].dist < sg[curr[0]][curr[1]].dist + cellWidth) {
 					sg[nbrs[i][0]][nbrs[i][1]].parent = curr;
-					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + 1;
+					sg[nbrs[i][0]][nbrs[i][1]].dist = sg[curr[0]][curr[1]].dist + cellWidth;
 					sg[nbrs[i][0]][nbrs[i][1]].priority = sg[curr[0]][curr[1]].dist + heuristic(nbrs[i]);
 					if(searchAlg == 0 && !sg[nbrs[i][0]][nbrs[i][1]].queued) {
 						sgQueue.push(nbrs[i]);
@@ -1446,8 +1446,9 @@ function graphGetNeighbors(idx) {
 	return nbrs;
 }
 function heuristic(idx) {
-	//
-	return distance(idx, goalIdx);
+	var curr_xy = gridIdxToXY(idx[0], idx[1]);
+	var goal_xy = gridIdxToXY(goalIdx[0], goalIdx[1]);
+	return distance(curr_xy, goal_xy);
 }
 function heapInsert(q, idx, priority) {
 	idx.priority = priority;
@@ -1473,7 +1474,6 @@ function heapInsert(q, idx, priority) {
 }
 function heapExtract(q) {
 	var output = q[0];
-	console.log(output.priority);
 
 	//Swap first and last element
 	var start = 0;
