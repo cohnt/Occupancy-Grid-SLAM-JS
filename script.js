@@ -1359,6 +1359,8 @@ function iterateGraphSearch() {
 
 	if(sgQueue.length == 0) {
 		pathPlanning = false;
+		running = true;
+		requestAnimationFrame(tick);
 		return;
 	}
 
