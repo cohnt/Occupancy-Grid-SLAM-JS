@@ -1069,7 +1069,7 @@ function calculateWeights() {
 	for(var i=0; i<lidarNumPoints; ++i) {
 		// lidarDataArr[i] = particles.map(a => Math.abs(a.lidarReadings[i] - lidarDistances[i])); //Get the differences in distance.
 		lidarDataArr[i] = particles.map(a => a.lidarProbs[i]);
-		lidarDataWeights[i] = normalizeWeight(weightFromDistance(lidarDataArr[i])); //Convert those differences into a weight.
+		lidarDataWeights[i] = weightFromDistance(lidarDataArr[i]); //Convert those differences into a weight.
 	}
 	//Combine and normalize the weights.
 	var combinedWeights = [];
