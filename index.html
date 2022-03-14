@@ -250,8 +250,8 @@
 				<td>A factor affecting how much the occupancy grid trusts new observations of no obstacles. Must be greater than 1.</td>
 			</tr>
 			<tr>
-				<td>Minimum Log-Prop</td>
-				<td><textarea class="parameterForm" autocomplete="off" cols="9" rows="1" onkeyup="(function(elt){
+				<td>Minimum Log-Prob</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
 					if(Number(elt.value) < maxLog) {
 						minLog = Number(elt.value);
 					}
@@ -259,8 +259,8 @@
 				<td>The minimum log-probability of each occupancy grid square. Can be any number, or set to "-Infinity" to disable. Must be less than the maximum log-probability.</td>
 			</tr>
 			<tr>
-				<td>Maximum Log-Prop</td>
-				<td><textarea class="parameterForm" autocomplete="off" cols="9" rows="1" onkeyup="(function(elt){
+				<td>Maximum Log-Prob</td>
+				<td><textarea class="parameterForm" autocomplete="off" cols="5" rows="1" onkeyup="(function(elt){
 					if(Number(elt.value) > minLog) {
 						maxLog = Number(elt.value);
 					}
