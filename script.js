@@ -237,6 +237,7 @@ function setup() {
 	document.getElementById("pauseButton").addEventListener("click", pauseButtonClick);
 	document.getElementById("resetButton").addEventListener("click", resetButtonClick);
 	document.getElementById("newWorldButton").addEventListener("click", newWorldButtonClick);
+	document.getElementById("exportMapButton").addEventListener("click", exportMapButtonClick);
 	document.addEventListener("keydown", function(e) {
 		keydownHandler(e);
 	});
@@ -347,6 +348,10 @@ function newWorldButtonClick() {
 		generateWorld();
 		reset();
 	}
+}
+function exportMapButtonClick() {
+	//This is the callback function if you click the export map button.
+	exportMap();
 }
 function keydownHandler(e) {
 	var keyId = e.which;
@@ -1523,6 +1528,217 @@ function computePathToGoal() {
 		var curr = path[path.length-1];
 		var next = sg[curr[0]][curr[1]].parent;
 		path.push(next);
+	}
+}
+
+////////////////////
+/// MAP EXPORT ///
+////////////////////
+//Exports the occupancy grid as a ROS map_server-compatible map (a "map.pgm" image alongside a
+//"map.yaml" metadata file, bundled into a single "map.zip"). This is the de facto standard format
+//consumed by ROS-based navigation stacks, including those built on RIX (https://github.com/rix-ros),
+//which mirrors ROS message conventions but doesn't define its own occupancy grid message/file format.
+
+function occupancyGridToPGM() {
+	//Builds a binary (P5) PGM image from the occupancy grid, following the map_server pixel convention
+	//(with negate:0): 255 (white) is free, 0 (black) is occupied, and values in between are unknown/uncertain.
+	//getProbFromLog already returns the probability that a cell is free, so no inversion is needed.
+	//Grid row 0 is the world's maximum-y row (see gridIdxToXY), which is also the top row of a standard
+	//image and the row that map_server's image loader maps to the highest-y row of the map, so the grid
+	//can be written out row-by-row with no flipping.
+	var header = "P5\n" + gridWidth + " " + gridHeight + "\n255\n";
+	var headerBytes = new TextEncoder().encode(header);
+	var pixels = new Uint8Array(gridWidth * gridHeight);
+	var idx = 0;
+	for(var i=0; i<gridHeight; ++i) {
+		for(var j=0; j<gridWidth; ++j) {
+			var probFree = getProbFromLog(occupancyGrid[i][j]);
+			var value = Math.round(probFree * 255);
+			value = Math.min(255, Math.max(0, value));
+			pixels[idx++] = value;
+		}
+	}
+	var pgmBytes = new Uint8Array(headerBytes.length + pixels.length);
+	pgmBytes.set(headerBytes, 0);
+	pgmBytes.set(pixels, headerBytes.length);
+	return pgmBytes;
+}
+function buildMapYAML(pgmFilename) {
+	//gridIdxToXY gives cell centers around a grid that's centered on (0,0), so the corner of the
+	//bottom-left cell (the map_server "origin", i.e. the pose of the map's bottom-left pixel) is
+	//just half the grid's full width/height away from the center.
+	var originX = -(gridWidth * cellWidth) / 2;
+	var originY = -(gridHeight * cellWidth) / 2;
+	return ""
+		+ "image: " + pgmFilename + "\n"
+		+ "resolution: " + cellWidth + "\n"
+		+ "origin: [" + originX + ", " + originY + ", 0.0]\n"
+		+ "negate: 0\n"
+		+ "occupied_thresh: 0.65\n"
+		+ "free_thresh: 0.196\n";
+}
+
+var crc32Table = null;
+function makeCRC32Table() {
+	var table = new Uint32Array(256);
+	for(var n=0; n<256; ++n) {
+		var c = n;
+		for(var k=0; k<8; ++k) {
+			c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+		}
+		table[n] = c >>> 0;
+	}
+	return table;
+}
+function crc32(bytes) {
+	if(!crc32Table) {
+		crc32Table = makeCRC32Table();
+	}
+	var crc = 0xFFFFFFFF;
+	for(var i=0; i<bytes.length; ++i) {
+		crc = crc32Table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+	}
+	return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+function writeUint16LE(arr, offset, value) {
+	arr[offset] = value & 0xFF;
+	arr[offset+1] = (value >>> 8) & 0xFF;
+}
+function writeUint32LE(arr, offset, value) {
+	arr[offset] = value & 0xFF;
+	arr[offset+1] = (value >>> 8) & 0xFF;
+	arr[offset+2] = (value >>> 16) & 0xFF;
+	arr[offset+3] = (value >>> 24) & 0xFF;
+}
+function buildZip(files) {
+	//Builds a minimal, uncompressed (store-method) ZIP archive from a list of {name, data} entries,
+	//so the exported map can be handed to the user as a single file via a single save dialog.
+	var localParts = [];
+	var centralParts = [];
+	var offset = 0;
+
+	for(var f=0; f<files.length; ++f) {
+		var nameBytes = new TextEncoder().encode(files[f].name);
+		var data = files[f].data;
+		var crc = crc32(data);
+
+		var localHeader = new Uint8Array(30 + nameBytes.length);
+		writeUint32LE(localHeader, 0, 0x04034b50); //Local file header signature
+		writeUint16LE(localHeader, 4, 20); //Version needed to extract
+		writeUint16LE(localHeader, 6, 0); //Flags
+		writeUint16LE(localHeader, 8, 0); //Compression method: 0 (stored)
+		writeUint16LE(localHeader, 10, 0); //File last modification time
+		writeUint16LE(localHeader, 12, 0); //File last modification date
+		writeUint32LE(localHeader, 14, crc);
+		writeUint32LE(localHeader, 18, data.length); //Compressed size
+		writeUint32LE(localHeader, 22, data.length); //Uncompressed size
+		writeUint16LE(localHeader, 26, nameBytes.length);
+		writeUint16LE(localHeader, 28, 0); //Extra field length
+		localHeader.set(nameBytes, 30);
+		localParts.push(localHeader, data);
+
+		var centralHeader = new Uint8Array(46 + nameBytes.length);
+		writeUint32LE(centralHeader, 0, 0x02014b50); //Central directory file header signature
+		writeUint16LE(centralHeader, 4, 20); //Version made by
+		writeUint16LE(centralHeader, 6, 20); //Version needed to extract
+		writeUint16LE(centralHeader, 8, 0); //Flags
+		writeUint16LE(centralHeader, 10, 0); //Compression method
+		writeUint16LE(centralHeader, 12, 0); //File last modification time
+		writeUint16LE(centralHeader, 14, 0); //File last modification date
+		writeUint32LE(centralHeader, 16, crc);
+		writeUint32LE(centralHeader, 20, data.length);
+		writeUint32LE(centralHeader, 24, data.length);
+		writeUint16LE(centralHeader, 28, nameBytes.length);
+		writeUint16LE(centralHeader, 30, 0); //Extra field length
+		writeUint16LE(centralHeader, 32, 0); //Comment length
+		writeUint16LE(centralHeader, 34, 0); //Disk number where file starts
+		writeUint16LE(centralHeader, 36, 0); //Internal file attributes
+		writeUint32LE(centralHeader, 38, 0); //External file attributes
+		writeUint32LE(centralHeader, 42, offset); //Offset of local file header
+		centralHeader.set(nameBytes, 46);
+		centralParts.push(centralHeader);
+
+		offset += localHeader.length + data.length;
+	}
+
+	var centralDirOffset = offset;
+	var centralDirSize = 0;
+	for(var i=0; i<centralParts.length; ++i) {
+		centralDirSize += centralParts[i].length;
+	}
+
+	var endRecord = new Uint8Array(22);
+	writeUint32LE(endRecord, 0, 0x06054b50); //End of central directory signature
+	writeUint16LE(endRecord, 4, 0); //Disk number
+	writeUint16LE(endRecord, 6, 0); //Disk where central directory starts
+	writeUint16LE(endRecord, 8, files.length); //Central directory entries on this disk
+	writeUint16LE(endRecord, 10, files.length); //Total central directory entries
+	writeUint32LE(endRecord, 12, centralDirSize);
+	writeUint32LE(endRecord, 16, centralDirOffset);
+	writeUint16LE(endRecord, 20, 0); //Comment length
+
+	var zipBytes = new Uint8Array(centralDirOffset + centralDirSize + endRecord.length);
+	var pos = 0;
+	for(var i=0; i<localParts.length; ++i) {
+		zipBytes.set(localParts[i], pos);
+		pos += localParts[i].length;
+	}
+	for(var i=0; i<centralParts.length; ++i) {
+		zipBytes.set(centralParts[i], pos);
+		pos += centralParts[i].length;
+	}
+	zipBytes.set(endRecord, pos);
+
+	return zipBytes;
+}
+function downloadBlob(blob, filename) {
+	//Fallback save mechanism for browsers without the File System Access API:
+	//this triggers the browser's normal download handling (which shows a save dialog if the
+	//browser is configured to ask where to save each file, or otherwise saves to the default
+	//downloads location).
+	var url = URL.createObjectURL(blob);
+	var a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
+}
+async function exportMap() {
+	//Exports the current occupancy grid as a ROS map_server-style map.pgm + map.yaml pair, bundled
+	//into a single map.zip, and prompts the user to save it.
+	var pgmBytes = occupancyGridToPGM();
+	var yamlBytes = new TextEncoder().encode(buildMapYAML("map.pgm"));
+	var zipBytes = buildZip([
+		{name: "map.pgm", data: pgmBytes},
+		{name: "map.yaml", data: yamlBytes}
+	]);
+	var blob = new Blob([zipBytes], {type: "application/zip"});
+
+	if(window.showSaveFilePicker) {
+		//Where supported, use the File System Access API to show a real native "Save As" dialog.
+		try {
+			var handle = await window.showSaveFilePicker({
+				suggestedName: "map.zip",
+				types: [{
+					description: "ROS Map Archive",
+					accept: {"application/zip": [".zip"]}
+				}]
+			});
+			var writable = await handle.createWritable();
+			await writable.write(blob);
+			await writable.close();
+		}
+		catch(e) {
+			if(e.name != "AbortError") {
+				//AbortError just means the user cancelled the save dialog; anything else, fall back.
+				downloadBlob(blob, "map.zip");
+			}
+		}
+	}
+	else {
+		downloadBlob(blob, "map.zip");
 	}
 }
 
